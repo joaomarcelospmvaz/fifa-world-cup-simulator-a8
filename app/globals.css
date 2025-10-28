@@ -4,32 +4,32 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated theme for FIFA World Cup aesthetic - deep blue primary with gold accents */
-  --background: oklch(0.98 0.005 240);
-  --foreground: oklch(0.15 0.02 240);
+  /* Lance.com.br inspired color scheme - green primary with clean whites */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.2 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 240);
+  --card-foreground: oklch(0.2 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 240);
-  --primary: oklch(0.35 0.12 250);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.75 0.15 85);
-  --secondary-foreground: oklch(0.15 0.02 240);
-  --muted: oklch(0.95 0.01 240);
-  --muted-foreground: oklch(0.5 0.02 240);
-  --accent: oklch(0.75 0.15 85);
-  --accent-foreground: oklch(0.15 0.02 240);
+  --popover-foreground: oklch(0.2 0 0);
+  --primary: oklch(0.45 0.15 145);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.35 0.12 145);
+  --secondary-foreground: oklch(0.99 0 0);
+  --muted: oklch(0.96 0.005 145);
+  --muted-foreground: oklch(0.5 0.01 145);
+  --accent: oklch(0.45 0.15 145);
+  --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.9 0.01 240);
-  --input: oklch(0.9 0.01 240);
-  --ring: oklch(0.35 0.12 250);
-  --chart-1: oklch(0.35 0.12 250);
-  --chart-2: oklch(0.75 0.15 85);
-  --chart-3: oklch(0.5 0.1 200);
-  --chart-4: oklch(0.6 0.12 160);
-  --chart-5: oklch(0.7 0.15 40);
-  --radius: 0.5rem;
+  --border: oklch(0.92 0.005 145);
+  --input: oklch(0.92 0.005 145);
+  --ring: oklch(0.45 0.15 145);
+  --chart-1: oklch(0.45 0.15 145);
+  --chart-2: oklch(0.35 0.12 145);
+  --chart-3: oklch(0.55 0.12 145);
+  --chart-4: oklch(0.6 0.1 145);
+  --chart-5: oklch(0.7 0.08 145);
+  --radius: 0.375rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -41,25 +41,25 @@
 }
 
 .dark {
-  --background: oklch(0.12 0.02 240);
+  --background: oklch(0.15 0.01 145);
   --foreground: oklch(0.98 0 0);
-  --card: oklch(0.18 0.02 240);
+  --card: oklch(0.2 0.01 145);
   --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.18 0.02 240);
+  --popover: oklch(0.2 0.01 145);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.45 0.15 250);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.75 0.15 85);
-  --secondary-foreground: oklch(0.12 0.02 240);
-  --muted: oklch(0.25 0.02 240);
-  --muted-foreground: oklch(0.65 0.02 240);
-  --accent: oklch(0.75 0.15 85);
-  --accent-foreground: oklch(0.12 0.02 240);
+  --primary: oklch(0.5 0.15 145);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.4 0.12 145);
+  --secondary-foreground: oklch(0.99 0 0);
+  --muted: oklch(0.25 0.01 145);
+  --muted-foreground: oklch(0.65 0.01 145);
+  --accent: oklch(0.5 0.15 145);
+  --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.25 0.02 240);
-  --input: oklch(0.25 0.02 240);
-  --ring: oklch(0.45 0.15 250);
+  --border: oklch(0.3 0.01 145);
+  --input: oklch(0.3 0.01 145);
+  --ring: oklch(0.5 0.15 145);
   --sidebar: oklch(0.145 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -71,7 +71,8 @@
 }
 
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
+  /* Using system fonts similar to Lance.com.br */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
