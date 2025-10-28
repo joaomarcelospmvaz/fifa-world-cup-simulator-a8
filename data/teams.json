@@ -1,0 +1,72 @@
+{
+  "pots": [
+    {
+      "name": "Pot 1",
+      "teams": [
+        { "name": "Argentina", "code": "ARG", "flag": "🇦🇷" },
+        { "name": "France", "code": "FRA", "flag": "🇫🇷" },
+        { "name": "Spain", "code": "ESP", "flag": "🇪🇸" },
+        { "name": "England", "code": "ENG", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+        { "name": "Brazil", "code": "BRA", "flag": "🇧🇷" },
+        { "name": "Belgium", "code": "BEL", "flag": "🇧🇪" },
+        { "name": "Portugal", "code": "POR", "flag": "🇵🇹" },
+        { "name": "Netherlands", "code": "NED", "flag": "🇳🇱" },
+        { "name": "USA", "code": "USA", "flag": "🇺🇸" },
+        { "name": "Mexico", "code": "MEX", "flag": "🇲🇽" },
+        { "name": "Canada", "code": "CAN", "flag": "🇨🇦" },
+        { "name": "Germany", "code": "GER", "flag": "🇩🇪" }
+      ]
+    },
+    {
+      "name": "Pot 2",
+      "teams": [
+        { "name": "Italy", "code": "ITA", "flag": "🇮🇹" },
+        { "name": "Croatia", "code": "CRO", "flag": "🇭🇷" },
+        { "name": "Uruguay", "code": "URU", "flag": "🇺🇾" },
+        { "name": "Denmark", "code": "DEN", "flag": "🇩🇰" },
+        { "name": "Switzerland", "code": "SUI", "flag": "🇨🇭" },
+        { "name": "Colombia", "code": "COL", "flag": "🇨🇴" },
+        { "name": "Senegal", "code": "SEN", "flag": "🇸🇳" },
+        { "name": "Japan", "code": "JPN", "flag": "🇯🇵" },
+        { "name": "Morocco", "code": "MAR", "flag": "🇲🇦" },
+        { "name": "South Korea", "code": "KOR", "flag": "🇰🇷" },
+        { "name": "Poland", "code": "POL", "flag": "🇵🇱" },
+        { "name": "Sweden", "code": "SWE", "flag": "🇸🇪" }
+      ]
+    },
+    {
+      "name": "Pot 3",
+      "teams": [
+        { "name": "Australia", "code": "AUS", "flag": "🇦🇺" },
+        { "name": "Egypt", "code": "EGY", "flag": "🇪🇬" },
+        { "name": "Nigeria", "code": "NGA", "flag": "🇳🇬" },
+        { "name": "Costa Rica", "code": "CRC", "flag": "🇨🇷" },
+        { "name": "Tunisia", "code": "TUN", "flag": "🇹🇳" },
+        { "name": "Algeria", "code": "ALG", "flag": "🇩🇿" },
+        { "name": "Cameroon", "code": "CMR", "flag": "🇨🇲" },
+        { "name": "Ecuador", "code": "ECU", "flag": "🇪🇨" },
+        { "name": "Mali", "code": "MLI", "flag": "🇲🇱" },
+        { "name": "Iran", "code": "IRN", "flag": "🇮🇷" },
+        { "name": "Peru", "code": "PER", "flag": "🇵🇪" },
+        { "name": "Ghana", "code": "GHA", "flag": "🇬🇭" }
+      ]
+    },
+    {
+      "name": "Pot 4",
+      "teams": [
+        { "name": "Saudi Arabia", "code": "KSA", "flag": "🇸🇦" },
+        { "name": "Qatar", "code": "QAT", "flag": "🇶🇦" },
+        { "name": "Iraq", "code": "IRQ", "flag": "🇮🇶" },
+        { "name": "UAE", "code": "UAE", "flag": "🇦🇪" },
+        { "name": "Panama", "code": "PAN", "flag": "🇵🇦" },
+        { "name": "Jamaica", "code": "JAM", "flag": "🇯🇲" },
+        { "name": "Paraguay", "code": "PAR", "flag": "🇵🇾" },
+        { "name": "Venezuela", "code": "VEN", "flag": "🇻🇪" },
+        { "name": "Bolivia", "code": "BOL", "flag": "🇧🇴" },
+        { "name": "Honduras", "code": "HON", "flag": "🇭🇳" },
+        { "name": "New Zealand", "code": "NZL", "flag": "🇳🇿" },
+        { "name": "China", "code": "CHN", "flag": "🇨🇳" }
+      ]
+    }
+  ]
+}
