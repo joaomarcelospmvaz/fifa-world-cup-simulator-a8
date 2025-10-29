@@ -6,7 +6,7 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import teamsData from "@/data/teams.json"
-import { Trophy, Shuffle, RotateCcw, Hand, Zap, ChevronLeft, ChevronRight } from "lucide-react"
+import { Trophy, Shuffle, RotateCcw, Hand, Zap, ChevronLeft, ChevronRight, Download } from "lucide-react"
 
 type Team = {
   name: string
@@ -40,6 +40,8 @@ export default function DrawSimulator() {
   const cancelDrawRef = useRef(false)
   const teamClickedRef = useRef(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const groupsRef = useRef<HTMLDivElement>(null)
+  const imageGroupsRef = useRef<HTMLDivElement>(null)
 
   const initializeGroups = () => {
     return Array.from({ length: 12 }, (_, i) => ({
@@ -460,12 +462,189 @@ export default function DrawSimulator() {
     }
   }
 
+  const generateShareImage = async () => {
+    console.log("[v0] Starting image generation...")
+
+    try {
+      console.log("[v0] Creating canvas...")
+
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        console.error("[v0] Failed to get canvas context")
+        alert("Erro ao criar canvas. Tente novamente.")
+        return
+      }
+
+      canvas.width = 3200
+      canvas.height = 2200
+
+      // Background
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      // Title
+      ctx.fillStyle = "#16a34a"
+      ctx.font = "bold 64px system-ui, -apple-system, sans-serif"
+      ctx.textAlign = "center"
+      ctx.fillText("Copa do Mundo FIFA 2026", canvas.width / 2, 100)
+
+      ctx.fillStyle = "#666666"
+      ctx.font = "36px system-ui, -apple-system, sans-serif"
+      ctx.fillText("Resultado do Sorteio", canvas.width / 2, 160)
+
+      // Canvas: 3200px wide, 2200px tall
+      // 4 columns with proper margins and gaps
+      const groupWidth = 650
+      const groupHeight = 500
+      const gap = 150
+      const startX = 150
+      const startY = 280
+      const cols = 4
+      // Math: 150 + 4 * (650 + 150) - 150 = 150 + 3200 - 150 = 3200px (fits perfectly)
+
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i]
+        const col = i % cols
+        const row = Math.floor(i / cols)
+        const x = startX + col * (groupWidth + gap)
+        const y = startY + row * (groupHeight + gap)
+
+        // Group border
+        ctx.strokeStyle = "#e5e7eb"
+        ctx.lineWidth = 4
+        ctx.strokeRect(x, y, groupWidth, groupHeight)
+
+        // Group header circle
+        ctx.fillStyle = "#16a34a"
+        ctx.beginPath()
+        ctx.arc(x + groupWidth / 2, y + 70, 40, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Group letter
+        ctx.fillStyle = "#ffffff"
+        ctx.font = "bold 40px system-ui, -apple-system, sans-serif"
+        ctx.textAlign = "center"
+        ctx.fillText(group.name, x + groupWidth / 2, y + 80)
+
+        // Group label
+        ctx.fillStyle = "#000000"
+        ctx.font = "bold 36px system-ui, -apple-system, sans-serif"
+        ctx.fillText(`Grupo ${group.name}`, x + groupWidth / 2, y + 140)
+
+        // Draw teams in 2x2 grid
+        const teamWidth = 280
+        const teamHeight = 150
+        const teamGap = 40
+        const teamStartX = x + 40
+        const teamStartY = y + 190
+
+        for (let j = 0; j < group.teams.length; j++) {
+          const team = group.teams[j]
+          const teamCol = j % 2
+          const teamRow = Math.floor(j / 2)
+          const teamX = teamStartX + teamCol * (teamWidth + teamGap)
+          const teamY = teamStartY + teamRow * (teamHeight + teamGap)
+
+          // Team background
+          ctx.fillStyle = "#f9fafb"
+          ctx.fillRect(teamX, teamY, teamWidth, teamHeight)
+          ctx.strokeStyle = "#e5e7eb"
+          ctx.lineWidth = 2
+          ctx.strokeRect(teamX, teamY, teamWidth, teamHeight)
+
+          // Team flag (emoji)
+          ctx.font = "52px system-ui, -apple-system, sans-serif"
+          ctx.textAlign = "center"
+          ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 60)
+
+          // Team name
+          ctx.fillStyle = "#000000"
+          ctx.font = "600 26px system-ui, -apple-system, sans-serif"
+          ctx.textAlign = "center"
+          const teamName = team.name.length > 13 ? team.name.substring(0, 11) + "..." : team.name
+          ctx.fillText(teamName, teamX + teamWidth / 2, teamY + 105)
+
+          // Confederation
+          ctx.fillStyle = "#666666"
+          ctx.font = "20px system-ui, -apple-system, sans-serif"
+          ctx.fillText(team.confederation, teamX + teamWidth / 2, teamY + 132)
+        }
+      }
+
+      console.log("[v0] Canvas drawn successfully")
+
+      // Convert to data URL
+      const dataUrl = canvas.toDataURL("image/png")
+      console.log("[v0] Data URL created")
+
+      // Open in new window for Safari compatibility
+      const newWindow = window.open()
+      if (newWindow) {
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Copa do Mundo FIFA 2026 - Sorteio</title>
+              <style>
+                body {
+                  margin: 0;
+                  padding: 20px;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  min-height: 100vh;
+                  background: #f3f4f6;
+                  font-family: system-ui, -apple-system, sans-serif;
+                }
+                img {
+                  max-width: 100%;
+                  height: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                  border-radius: 8px;
+                  background: white;
+                }
+                p {
+                  margin-top: 20px;
+                  color: #666;
+                  text-align: center;
+                }
+              </style>
+            </head>
+            <body>
+              <img src="${dataUrl}" alt="Copa do Mundo FIFA 2026 - Sorteio" />
+              <p>Clique com o botão direito na imagem e selecione "Salvar imagem como..." para baixar</p>
+            </body>
+          </html>
+        `)
+        newWindow.document.close()
+        console.log("[v0] Image opened in new window")
+      } else {
+        // Fallback: try download if popup was blocked
+        console.log("[v0] Popup blocked, trying download...")
+        const link = document.createElement("a")
+        link.href = dataUrl
+        link.download = `copa-mundial-2026-sorteio-${new Date().getTime()}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+
+      console.log("[v0] Image generation completed")
+    } catch (error) {
+      console.error("[v0] Error generating image:", error)
+      alert("Erro ao gerar imagem. Tente novamente.")
+    }
+  }
+
   const hasDrawn = groups.length > 0 && groups[0].teams.length > 0
   const isManualMode = drawMode === "manual"
   const isAutomaticMode = drawMode === "automatic"
   const isInstantMode = drawMode === "instant"
   const shouldShowGroups = hasDrawn || (isManualMode && groups.length > 0)
   const hasRemainingTeams = availablePots.some((pot) => pot.teams.length > 0)
+  const isDrawComplete = groups.length === 12 && groups.every((group) => group.teams.length === 4)
 
   return (
     <div className="min-h-screen bg-background">
@@ -484,30 +663,33 @@ export default function DrawSimulator() {
       <div className="container mx-auto px-3 md:px-4 pb-6 md:pb-8 max-w-7xl">
         {!drawMode && (
           <div
-            className={`flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory transition-opacity duration-300 ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+            className={`flex flex-col items-center transition-opacity duration-300 ${isTransitioning ? "opacity-0" : "opacity-100"}`}
           >
-            <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 flex-shrink-0 snap-center">
-              <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Automático</span>
-            </Button>
-            <Button
-              onClick={() => startDraw("instant")}
-              variant="secondary"
-              size="lg"
-              className="gap-2 flex-shrink-0 snap-center"
-            >
-              <Zap className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Instantâneo</span>
-            </Button>
-            <Button
-              onClick={() => startDraw("manual")}
-              variant="outline"
-              size="lg"
-              className="gap-2 flex-shrink-0 snap-center"
-            >
-              <Hand className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Manual</span>
-            </Button>
+            <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-center">Tipos de Simulação</h2>
+            <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory">
+              <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 flex-shrink-0 snap-center">
+                <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">Automático</span>
+              </Button>
+              <Button
+                onClick={() => startDraw("instant")}
+                variant="secondary"
+                size="lg"
+                className="gap-2 flex-shrink-0 snap-center"
+              >
+                <Zap className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">Instantâneo</span>
+              </Button>
+              <Button
+                onClick={() => startDraw("manual")}
+                variant="outline"
+                size="lg"
+                className="gap-2 flex-shrink-0 snap-center"
+              >
+                <Hand className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">Manual</span>
+              </Button>
+            </div>
           </div>
         )}
 
@@ -664,6 +846,7 @@ export default function DrawSimulator() {
 
         {shouldShowGroups && (
           <div
+            ref={groupsRef}
             className={`transition-all duration-500 ${isTransitioning ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
           >
             <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
@@ -682,7 +865,6 @@ export default function DrawSimulator() {
                 </Button>
               )}
             </div>
-            {/* </CHANGE> */}
             <div className="flex gap-2 overflow-x-auto pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6">
               {groups.map((group, groupIndex) => {
                 const canPlace =
@@ -749,6 +931,15 @@ export default function DrawSimulator() {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {isDrawComplete && (
+          <div className="mt-6 md:mt-8 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Button onClick={generateShareImage} size="lg" className="gap-2 shadow-lg">
+              <Download className="w-5 h-5" />
+              <span>Baixar Imagem para Compartilhar</span>
+            </Button>
           </div>
         )}
 
