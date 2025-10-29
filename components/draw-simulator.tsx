@@ -1,16 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import teamsData from "@/data/teams.json"
-import { Trophy, Shuffle, RotateCcw, Hand, Zap } from "lucide-react"
+import { Trophy, Shuffle, RotateCcw, Hand, Zap, ChevronLeft, ChevronRight } from "lucide-react"
 
 type Team = {
   name: string
   code: string
   flag: string
   confederation: string
+  potIndex?: number // Added potIndex to track which pot the team came from
 }
 
 type Pot = {
@@ -32,7 +35,10 @@ export default function DrawSimulator() {
   const [availablePots, setAvailablePots] = useState<Pot[]>(teamsData.pots)
   const [drawMode, setDrawMode] = useState<DrawMode | null>(null)
   const [selectedTeam, setSelectedTeam] = useState<{ team: Team; potIndex: number } | null>(null)
+  const [movingFromGroup, setMovingFromGroup] = useState<number | null>(null)
   const [currentPotIndex, setCurrentPotIndex] = useState(0)
+  const cancelDrawRef = useRef(false)
+  const teamClickedRef = useRef(false)
 
   const initializeGroups = () => {
     return Array.from({ length: 12 }, (_, i) => ({
@@ -58,7 +64,13 @@ export default function DrawSimulator() {
     return groupsArray.filter((group) => countUEFATeamsInGroup(group) === 2).length
   }
 
-  const canPlaceTeamInGroup = (team: Team, groupIndex: number, potIndex: number, groupsArray: Group[]): boolean => {
+  const canPlaceTeamInGroup = (
+    team: Team,
+    groupIndex: number,
+    potIndex: number,
+    groupsArray: Group[],
+    excludeFromGroupIndex: number | null = null,
+  ): boolean => {
     const group = groupsArray[groupIndex]
 
     // Rule 1: Mexico must be in Group A position 1
@@ -69,22 +81,39 @@ export default function DrawSimulator() {
       return false
     }
 
-    // Rule 2: Check if group already has a team from this pot
+    // Get all teams from the pot we're trying to place from
     const currentPotTeams = teamsData.pots[potIndex].teams
-    const hasTeamFromSamePot = group.teams.some((t) => currentPotTeams.some((pt) => pt.code === t.code))
-    if (hasTeamFromSamePot) {
-      return false
+
+    // Check each team in the group
+    for (const teamInGroup of group.teams) {
+      // Skip the team being moved if it's in this group
+      if (excludeFromGroupIndex === groupIndex && teamInGroup.code === team.code) {
+        continue
+      }
+
+      // Check if this team in the group is from the same pot
+      const isFromSamePot = currentPotTeams.some((pt) => pt.code === teamInGroup.code)
+      if (isFromSamePot) {
+        return false
+      }
     }
 
-    // Rule 3: Check if group is full
-    if (group.teams.length >= 4) {
+    // Rule 3: Check if group is full (excluding the team being moved if it's in this group)
+    const effectiveTeamCount = excludeFromGroupIndex === groupIndex ? group.teams.length - 1 : group.teams.length
+    if (effectiveTeamCount >= 4) {
       return false
     }
 
     // Rule 4: Confederation restrictions
     if (team.confederation === "UEFA") {
-      const uefaTeamsInGroup = countUEFATeamsInGroup(group)
-      const groupsWith2UEFA = countGroupsWith2UEFATeams(groupsArray)
+      // Create a temporary groups array for UEFA counting (excluding the team being moved)
+      const tempGroups = groupsArray.map((g, idx) => ({
+        ...g,
+        teams: excludeFromGroupIndex === idx ? g.teams.filter((t) => t.code !== team.code) : g.teams,
+      }))
+
+      const uefaTeamsInGroup = countUEFATeamsInGroup(tempGroups[groupIndex])
+      const groupsWith2UEFA = countGroupsWith2UEFATeams(tempGroups)
 
       // UEFA can have max 2 teams per group, and only 4 groups can have 2 UEFA teams
       if (uefaTeamsInGroup >= 2) {
@@ -94,8 +123,11 @@ export default function DrawSimulator() {
         return false
       }
     } else {
-      // Non-UEFA teams: cannot be in same group with team from same confederation
-      const hasTeamFromSameConfederation = group.teams.some((t) => t.confederation === team.confederation)
+      // Non-UEFA teams: cannot be in same group with team from same confederation (excluding the team being moved)
+      const hasTeamFromSameConfederation = group.teams.some(
+        (t) =>
+          t.confederation === team.confederation && !(excludeFromGroupIndex === groupIndex && t.code === team.code),
+      )
       if (hasTeamFromSameConfederation) {
         return false
       }
@@ -105,6 +137,7 @@ export default function DrawSimulator() {
   }
 
   const startDraw = (mode: DrawMode) => {
+    cancelDrawRef.current = false
     setDrawMode(mode)
     const newGroups = initializeGroups()
     setGroups(newGroups)
@@ -165,7 +198,7 @@ export default function DrawSimulator() {
     // Mexico must be first (Group A position 1)
     const mexicoTeam = teamsData.pots[0].teams.find((t) => t.code === "MEX")
     if (mexicoTeam) {
-      allTeams.push({ team: mexicoTeam, potIndex: 0 })
+      allTeams.push({ team: { ...mexicoTeam, potIndex: 0 }, potIndex: 0 }) // Store potIndex in team
     }
 
     // Add all other teams
@@ -181,7 +214,7 @@ export default function DrawSimulator() {
       // Shuffle teams within each pot for randomness
       const shuffledTeams = shuffleArray(teamsToAdd)
       shuffledTeams.forEach((team) => {
-        allTeams.push({ team, potIndex })
+        allTeams.push({ team: { ...team, potIndex }, potIndex }) // Store potIndex in team
       })
     }
 
@@ -196,8 +229,20 @@ export default function DrawSimulator() {
 
     // Animate the placement
     for (let i = 0; i < allTeams.length; i++) {
+      if (cancelDrawRef.current) {
+        setCurrentDrawingTeam(null)
+        setIsDrawing(false)
+        return
+      }
+
       setCurrentDrawingTeam(allTeams[i].team)
       await new Promise((resolve) => setTimeout(resolve, 400))
+
+      if (cancelDrawRef.current) {
+        setCurrentDrawingTeam(null)
+        setIsDrawing(false)
+        return
+      }
 
       // Update groups progressively to show animation
       const progressGroups = initializeGroups()
@@ -205,7 +250,7 @@ export default function DrawSimulator() {
         const { team } = allTeams[j]
         const groupIndex = result.findIndex((g) => g.teams.some((t) => t.code === team.code))
         if (groupIndex !== -1) {
-          progressGroups[groupIndex].teams.push(team)
+          progressGroups[groupIndex].teams.push(team) // Team already has potIndex stored
         }
       }
       setGroups([...progressGroups])
@@ -226,7 +271,7 @@ export default function DrawSimulator() {
     // Mexico must be first (Group A position 1)
     const mexicoTeam = teamsData.pots[0].teams.find((t) => t.code === "MEX")
     if (mexicoTeam) {
-      allTeams.push({ team: mexicoTeam, potIndex: 0 })
+      allTeams.push({ team: { ...mexicoTeam, potIndex: 0 }, potIndex: 0 }) // Store potIndex in team
     }
 
     // Add all other teams
@@ -242,7 +287,7 @@ export default function DrawSimulator() {
       // Shuffle teams within each pot for randomness
       const shuffledTeams = shuffleArray(teamsToAdd)
       shuffledTeams.forEach((team) => {
-        allTeams.push({ team, potIndex })
+        allTeams.push({ team: { ...team, potIndex }, potIndex }) // Store potIndex in team
       })
     }
 
@@ -262,18 +307,79 @@ export default function DrawSimulator() {
 
   const handleTeamSelect = (team: Team, potIndex: number) => {
     setSelectedTeam({ team, potIndex })
+    setMovingFromGroup(null)
+  }
+
+  const handlePlacedTeamClick = (team: Team, groupIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    teamClickedRef.current = true
+
+    setTimeout(() => {
+      teamClickedRef.current = false
+    }, 100)
+
+    if (!isManualMode) {
+      return
+    }
+
+    // Use the stored potIndex from the team object
+    if (team.potIndex === undefined) {
+      console.error("[v0] Team does not have potIndex stored:", team)
+      return
+    }
+
+    setSelectedTeam({ team, potIndex: team.potIndex })
+    setMovingFromGroup(groupIndex)
   }
 
   const handleGroupSelect = (groupIndex: number) => {
-    if (!selectedTeam || !canPlaceTeamInGroup(selectedTeam.team, groupIndex, selectedTeam.potIndex, groups)) {
+    if (teamClickedRef.current) {
+      return
+    }
+
+    if (!selectedTeam) {
+      return
+    }
+
+    if (movingFromGroup !== null) {
+      if (movingFromGroup === groupIndex) {
+        setSelectedTeam(null)
+        setMovingFromGroup(null)
+        return
+      }
+
+      const canPlace = canPlaceTeamInGroup(
+        selectedTeam.team,
+        groupIndex,
+        selectedTeam.potIndex,
+        groups,
+        movingFromGroup,
+      )
+
+      if (!canPlace) {
+        return
+      }
+
+      const newGroups = [...groups]
+      newGroups[movingFromGroup].teams = newGroups[movingFromGroup].teams.filter(
+        (t) => t.code !== selectedTeam.team.code,
+      )
+      newGroups[groupIndex].teams.push({ ...selectedTeam.team, potIndex: selectedTeam.potIndex })
+      setGroups(newGroups)
+
+      setSelectedTeam(null)
+      setMovingFromGroup(null)
+      return
+    }
+
+    if (!canPlaceTeamInGroup(selectedTeam.team, groupIndex, selectedTeam.potIndex, groups)) {
       return
     }
 
     const newGroups = [...groups]
-    newGroups[groupIndex].teams.push(selectedTeam.team)
+    newGroups[groupIndex].teams.push({ ...selectedTeam.team, potIndex: selectedTeam.potIndex })
     setGroups(newGroups)
 
-    // Remove team from available pots
     const newPots = [...availablePots]
     newPots[selectedTeam.potIndex].teams = newPots[selectedTeam.potIndex].teams.filter(
       (t) => t.code !== selectedTeam.team.code,
@@ -282,12 +388,10 @@ export default function DrawSimulator() {
 
     setSelectedTeam(null)
 
-    // Check if current pot is empty, move to next pot
     if (newPots[currentPotIndex].teams.length === 0 && currentPotIndex < 3) {
       setCurrentPotIndex(currentPotIndex + 1)
     }
 
-    // Check if draw is complete
     const allPotsEmpty = newPots.every((pot) => pot.teams.length === 0)
     if (allPotsEmpty) {
       setIsDrawing(false)
@@ -295,11 +399,13 @@ export default function DrawSimulator() {
   }
 
   const resetDraw = () => {
+    cancelDrawRef.current = true
     setGroups([])
     setCurrentDrawingTeam(null)
     setAvailablePots(teamsData.pots)
     setDrawMode(null)
     setSelectedTeam(null)
+    setMovingFromGroup(null)
     setCurrentPotIndex(0)
     setIsDrawing(false)
   }
@@ -307,18 +413,16 @@ export default function DrawSimulator() {
   const completeDrawAutomatically = () => {
     const currentGroups = [...groups]
 
-    // Prepare remaining teams with their pot indices
     const remainingTeams: { team: Team; potIndex: number }[] = []
 
     for (let potIndex = 0; potIndex < availablePots.length; potIndex++) {
       const pot = availablePots[potIndex]
       const shuffledTeams = shuffleArray([...pot.teams])
       shuffledTeams.forEach((team) => {
-        remainingTeams.push({ team, potIndex })
+        remainingTeams.push({ team: { ...team, potIndex }, potIndex }) // Store potIndex in team
       })
     }
 
-    // Use backtracking to place remaining teams
     const result = placeTeamsWithBacktracking(currentGroups, remainingTeams)
 
     if (!result) {
@@ -333,6 +437,17 @@ export default function DrawSimulator() {
     setSelectedTeam(null)
   }
 
+  const scrollPot = (potIndex: number, direction: "left" | "right") => {
+    const container = document.getElementById(`pot-${potIndex}`)
+    if (container) {
+      const scrollAmount = 200
+      container.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      })
+    }
+  }
+
   const hasDrawn = groups.length > 0 && groups[0].teams.length > 0
   const isManualMode = drawMode === "manual"
   const isAutomaticMode = drawMode === "automatic"
@@ -342,45 +457,49 @@ export default function DrawSimulator() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground py-6 md:py-8 mb-6 md:mb-8 shadow-sm">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col items-center gap-3 mb-4">
-            <Trophy className="w-10 h-10 md:w-12 md:h-12" />
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-balance text-center">
-              Copa do Mundo FIFA 2026
-            </h1>
+      <div className="bg-primary text-primary-foreground py-4 md:py-6 mb-4 md:mb-6 shadow-sm">
+        <div className="container mx-auto px-3 md:px-4 max-w-7xl">
+          <div className="flex items-center justify-center gap-2 md:gap-3">
+            <Trophy className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0" />
+            <div className="text-center">
+              <h1 className="text-xl md:text-3xl lg:text-4xl font-bold leading-tight">Copa do Mundo FIFA 2026</h1>
+              <p className="text-sm md:text-lg opacity-90">Simulador de Sorteio</p>
+            </div>
           </div>
-          <p className="text-lg md:text-xl text-center opacity-90">Simulador de Sorteio</p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-8 max-w-7xl">
+      <div className="container mx-auto px-3 md:px-4 pb-6 md:pb-8 max-w-7xl">
         {!drawMode && (
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4 justify-center mb-6">
-            <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 w-full sm:w-auto">
-              <Shuffle className="w-5 h-5" />
-              Sorteio Automático
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory">
+            <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 flex-shrink-0 snap-center">
+              <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Automático</span>
             </Button>
             <Button
               onClick={() => startDraw("instant")}
               variant="secondary"
               size="lg"
-              className="gap-2 w-full sm:w-auto"
+              className="gap-2 flex-shrink-0 snap-center"
             >
-              <Zap className="w-5 h-5" />
-              Sorteio Instantâneo
+              <Zap className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Instantâneo</span>
             </Button>
-            <Button onClick={() => startDraw("manual")} variant="outline" size="lg" className="gap-2 w-full sm:w-auto">
-              <Hand className="w-5 h-5" />
-              Sorteio Manual
+            <Button
+              onClick={() => startDraw("manual")}
+              variant="outline"
+              size="lg"
+              className="gap-2 flex-shrink-0 snap-center"
+            >
+              <Hand className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Manual</span>
             </Button>
           </div>
         )}
 
         {drawMode && (
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4 justify-center mb-6">
-            <div className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-center text-sm md:text-base">
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory">
+            <div className="px-3 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-xs md:text-sm flex-shrink-0 snap-center flex items-center">
               {isManualMode ? "Modo Manual" : isInstantMode ? "Modo Instantâneo" : "Modo Automático"}
             </div>
             {isManualMode && hasRemainingTeams && (
@@ -388,153 +507,203 @@ export default function DrawSimulator() {
                 onClick={completeDrawAutomatically}
                 variant="secondary"
                 size="lg"
-                className="gap-2 w-full sm:w-auto"
+                className="gap-2 flex-shrink-0 snap-center"
               >
-                <Zap className="w-5 h-5" />
-                Completar Automaticamente
+                <Zap className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">Completar</span>
               </Button>
             )}
-            <Button onClick={resetDraw} variant="outline" size="lg" className="gap-2 bg-transparent w-full sm:w-auto">
-              <RotateCcw className="w-5 h-5" />
-              Reiniciar Sorteio
+            <Button
+              onClick={resetDraw}
+              variant="outline"
+              size="lg"
+              className="gap-2 bg-transparent flex-shrink-0 snap-center"
+            >
+              <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Reiniciar</span>
             </Button>
           </div>
         )}
 
-        {/* Current Drawing Team */}
         {currentDrawingTeam && (
-          <Card className="p-6 md:p-8 mb-6 md:mb-8 text-center bg-primary text-primary-foreground animate-in fade-in zoom-in duration-300">
-            <p className="text-xs md:text-sm font-medium mb-2 opacity-90">Sorteando Agora</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4">
-              <span className="text-4xl md:text-5xl">{currentDrawingTeam.flag}</span>
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold">{currentDrawingTeam.name}</h2>
-                <p className="text-base md:text-lg opacity-90">{currentDrawingTeam.code}</p>
+          <Card className="p-4 md:p-6 mb-4 md:mb-6 bg-primary text-primary-foreground animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-3xl md:text-4xl">{currentDrawingTeam.flag}</span>
+              <div className="text-left">
+                <p className="text-xs font-medium opacity-90">Sorteando</p>
+                <h2 className="text-lg md:text-2xl font-bold leading-tight">{currentDrawingTeam.name}</h2>
               </div>
             </div>
           </Card>
         )}
 
         {isManualMode && availablePots.length > 0 && (
-          <Card className="p-4 md:p-6 mb-6 md:mb-8 text-center bg-accent/10 border-accent">
-            <p className="text-base md:text-lg font-semibold mb-2">
+          <Card className="p-3 md:p-4 mb-4 md:mb-6 bg-accent/10 border-accent">
+            <p className="text-sm md:text-base font-semibold mb-1">
               {selectedTeam
-                ? `Selecionado: ${selectedTeam.team.flag} ${selectedTeam.team.name} - Agora selecione um grupo`
-                : `Selecione uma seleção de ${availablePots[currentPotIndex]?.name || "um pote"}`}
+                ? movingFromGroup !== null
+                  ? `${selectedTeam.team.flag} ${selectedTeam.team.name} - Mover para outro grupo`
+                  : `${selectedTeam.team.flag} ${selectedTeam.team.name} - Selecione um grupo`
+                : `Selecione uma seleção`}
             </p>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              Regras FIFA: México no Grupo A • Seleções do mesmo pote separadas • Mesma confederação separada (UEFA: máx
-              2 por grupo em 4 grupos)
+            <p className="text-xs text-muted-foreground">
+              {movingFromGroup !== null
+                ? "Clique em um grupo para mover ou clique no grupo atual para cancelar"
+                : "México no Grupo A • Mesmo pote separado • Mesma confederação separada (UEFA: máx 2/grupo em 4 grupos)"}
             </p>
           </Card>
         )}
 
-        {/* Pots Display (before/during manual draw) */}
         {!isAutomaticMode &&
           !isInstantMode &&
           availablePots.length > 0 &&
           availablePots.some((pot) => pot.teams.length > 0) && (
-            <div className="mb-8 md:mb-12">
-              <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">Potes do Torneio</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                {availablePots.map((pot, potIndex) => (
+            <div className={`space-y-4 transition-all duration-500 ${selectedTeam ? "mb-4" : "mb-6 md:mb-8"}`}>
+              <h2 className="text-lg md:text-xl font-bold">Potes do Torneio</h2>
+              {availablePots.map((pot, potIndex) => {
+                const shouldHidePot = selectedTeam && selectedTeam.potIndex !== potIndex
+
+                return (
                   <Card
                     key={potIndex}
-                    className={`p-4 md:p-6 transition-all ${
+                    className={`p-3 md:p-4 transition-all duration-500 ${
                       isManualMode && pot.teams.length > 0
                         ? "ring-2 ring-primary shadow-lg"
                         : pot.teams.length === 0
                           ? "opacity-50"
                           : ""
-                    }`}
+                    } ${shouldHidePot ? "opacity-0 h-0 overflow-hidden p-0 mb-0" : "opacity-100"}`}
                   >
-                    <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4 text-center text-primary">{pot.name}</h3>
-                    <div className="space-y-2">
-                      {pot.teams.map((team, teamIndex) => (
-                        <button
-                          key={teamIndex}
-                          onClick={() => isManualMode && handleTeamSelect(team, potIndex)}
-                          disabled={!isManualMode || pot.teams.length === 0}
-                          className={`w-full flex items-center gap-2 md:gap-3 p-2 rounded-lg transition-all ${
-                            isManualMode && pot.teams.length > 0
-                              ? "bg-muted/50 hover:bg-accent hover:scale-105 cursor-pointer active:scale-95"
-                              : "bg-muted/50 cursor-not-allowed"
-                          } ${selectedTeam?.team.code === team.code ? "ring-2 ring-primary bg-accent" : ""}`}
-                        >
-                          <span className="text-xl md:text-2xl">{team.flag}</span>
-                          <div className="flex-1 min-w-0 text-left">
-                            <p className="font-medium text-xs md:text-sm truncate">{team.name}</p>
-                            <p className="text-xs text-muted-foreground">{team.code}</p>
+                    {!shouldHidePot && (
+                      <>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm md:text-base font-bold text-primary">{pot.name}</h3>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => scrollPot(potIndex, "left")}
+                              className="h-7 w-7 p-0"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => scrollPot(potIndex, "right")}
+                              className="h-7 w-7 p-0"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
                           </div>
-                        </button>
-                      ))}
-                      {pot.teams.length === 0 && (
-                        <div className="text-center py-4 text-muted-foreground text-xs md:text-sm">
-                          Todas as seleções sorteadas
                         </div>
-                      )}
-                    </div>
+                        <div
+                          id={`pot-${potIndex}`}
+                          className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide"
+                          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        >
+                          {pot.teams.map((team, teamIndex) => (
+                            <button
+                              key={teamIndex}
+                              onClick={() => isManualMode && handleTeamSelect(team, potIndex)}
+                              disabled={!isManualMode || pot.teams.length === 0}
+                              className={`flex-shrink-0 w-24 md:w-28 snap-center transition-all ${
+                                isManualMode && pot.teams.length > 0
+                                  ? "hover:scale-105 cursor-pointer active:scale-95"
+                                  : "cursor-not-allowed"
+                              } ${selectedTeam?.team.code === team.code ? "scale-105" : ""}`}
+                            >
+                              <Card
+                                className={`p-2 h-full ${
+                                  selectedTeam?.team.code === team.code
+                                    ? "ring-2 ring-primary bg-accent shadow-lg"
+                                    : "bg-card hover:bg-accent/50"
+                                }`}
+                              >
+                                <div className="flex flex-col items-center gap-1.5 text-center">
+                                  <span className="text-2xl md:text-3xl">{team.flag}</span>
+                                  <p className="font-semibold text-xs leading-tight line-clamp-2">{team.name}</p>
+                                  <p className="text-[10px] text-muted-foreground">{team.confederation}</p>
+                                </div>
+                              </Card>
+                            </button>
+                          ))}
+                          {pot.teams.length === 0 && (
+                            <div className="w-full text-center py-4 text-muted-foreground text-xs">Todas sorteadas</div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </Card>
-                ))}
-              </div>
+                )
+              })}
             </div>
           )}
 
-        {/* Groups Display (after/during draw) */}
         {shouldShowGroups && (
           <div>
-            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">
+            <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
               {isManualMode ? "Sorteio em Andamento" : "Resultado do Sorteio"}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="flex gap-2 overflow-x-auto pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6">
               {groups.map((group, groupIndex) => {
                 const canPlace =
-                  selectedTeam && canPlaceTeamInGroup(selectedTeam.team, groupIndex, selectedTeam.potIndex, groups)
+                  selectedTeam &&
+                  canPlaceTeamInGroup(selectedTeam.team, groupIndex, selectedTeam.potIndex, groups, movingFromGroup)
 
                 return (
                   <Card
                     key={groupIndex}
                     onClick={() => isManualMode && selectedTeam && handleGroupSelect(groupIndex)}
-                    className={`p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500 transition-all ${
+                    className={`p-2 flex-shrink-0 w-32 md:w-auto snap-center animate-in fade-in slide-in-from-bottom-4 duration-500 transition-all ${
                       isManualMode && selectedTeam
                         ? canPlace
                           ? "cursor-pointer hover:ring-2 hover:ring-primary hover:shadow-lg active:scale-95"
                           : "opacity-50 cursor-not-allowed"
                         : ""
-                    }`}
+                    } ${movingFromGroup === groupIndex ? "ring-2 ring-amber-500" : ""}`}
                     style={{ animationDelay: `${groupIndex * 50}ms` }}
                   >
-                    <div className="text-center mb-3 md:mb-4">
-                      <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-primary-foreground font-bold text-lg md:text-xl mb-2">
+                    <div className="text-center mb-1.5">
+                      <div className="inline-flex items-center justify-center w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs md:text-sm mb-0.5">
                         {group.name}
                       </div>
-                      <h3 className="text-base md:text-lg font-bold">Grupo {group.name}</h3>
+                      <h3 className="text-[10px] md:text-xs font-bold">Grupo {group.name}</h3>
                     </div>
-                    <div className="space-y-2 md:space-y-3">
+                    <div className="grid grid-cols-2 gap-1">
                       {group.teams.map((team, teamIndex) => (
                         <div
                           key={teamIndex}
-                          className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors"
+                          onClick={(e) => {
+                            if (isManualMode) {
+                              handlePlacedTeamClick(team, groupIndex, e)
+                            }
+                          }}
+                          className={`flex flex-col items-center gap-0.5 p-1 rounded-md bg-card border border-border transition-all ${
+                            isManualMode
+                              ? "cursor-pointer hover:bg-accent hover:ring-1 hover:ring-primary active:scale-95"
+                              : "hover:bg-accent/50"
+                          } ${selectedTeam?.team.code === team.code && movingFromGroup === groupIndex ? "ring-1 ring-primary bg-accent" : ""}`}
                         >
-                          <span className="text-2xl md:text-3xl">{team.flag}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm md:text-base truncate">{team.name}</p>
-                            <p className="text-xs md:text-sm text-muted-foreground">{team.code}</p>
-                          </div>
+                          <span className="text-sm md:text-base flex-shrink-0">{team.flag}</span>
+                          <p className="font-semibold text-[8px] md:text-[9px] text-center leading-tight line-clamp-1">
+                            {team.name}
+                          </p>
+                          <p className="text-[7px] md:text-[8px] text-muted-foreground">{team.confederation}</p>
                         </div>
                       ))}
                       {group.teams.length === 0 && !isManualMode && (
-                        <div className="text-center py-6 md:py-8 text-muted-foreground text-xs md:text-sm">
-                          Aguardando sorteio...
+                        <div className="col-span-2 text-center py-2 md:py-3 text-muted-foreground text-[9px]">
+                          Aguardando...
                         </div>
                       )}
                       {isManualMode &&
                         Array.from({ length: 4 - group.teams.length }).map((_, i) => (
                           <div
                             key={`empty-${i}`}
-                            className="p-2 md:p-3 rounded-lg border-2 border-dashed border-muted-foreground/20 text-center text-muted-foreground text-xs md:text-sm"
+                            className="p-1 rounded-md border border-dashed border-muted-foreground/20 text-center text-muted-foreground text-[8px] flex items-center justify-center min-h-[3rem]"
                           >
-                            Vaga disponível
+                            Vaga
                           </div>
                         ))}
                     </div>
@@ -545,12 +714,10 @@ export default function DrawSimulator() {
           </div>
         )}
 
-        {/* Info Footer */}
-        <div className="mt-8 md:mt-12 text-center text-xs md:text-sm text-muted-foreground">
+        <div className="mt-6 md:mt-8 text-center text-xs text-muted-foreground space-y-1">
           <p>48 seleções • 12 grupos • 4 seleções por grupo</p>
-          <p className="mt-2">
-            Edite <code className="px-2 py-1 bg-muted rounded text-xs">data/teams.json</code> para personalizar as
-            seleções
+          <p>
+            Edite <code className="px-1.5 py-0.5 bg-muted rounded text-xs">data/teams.json</code> para personalizar
           </p>
         </div>
       </div>
