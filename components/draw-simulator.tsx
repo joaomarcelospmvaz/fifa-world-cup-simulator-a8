@@ -39,6 +39,7 @@ export default function DrawSimulator() {
   const [currentPotIndex, setCurrentPotIndex] = useState(0)
   const cancelDrawRef = useRef(false)
   const teamClickedRef = useRef(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   const initializeGroups = () => {
     return Array.from({ length: 12 }, (_, i) => ({
@@ -137,20 +138,26 @@ export default function DrawSimulator() {
   }
 
   const startDraw = (mode: DrawMode) => {
-    cancelDrawRef.current = false
-    setDrawMode(mode)
-    const newGroups = initializeGroups()
-    setGroups(newGroups)
-    setCurrentPotIndex(0)
-    setAvailablePots(teamsData.pots)
+    setIsTransitioning(true)
 
-    if (mode === "automatic") {
-      performAutomaticDraw()
-    } else if (mode === "instant") {
-      performInstantDraw()
-    } else if (mode === "manual") {
-      setIsDrawing(true)
-    }
+    setTimeout(() => {
+      cancelDrawRef.current = false
+      setDrawMode(mode)
+      const newGroups = initializeGroups()
+      setGroups(newGroups)
+      setCurrentPotIndex(0)
+      setAvailablePots(teamsData.pots)
+
+      if (mode === "automatic") {
+        performAutomaticDraw()
+      } else if (mode === "instant") {
+        performInstantDraw()
+      } else if (mode === "manual") {
+        setIsDrawing(true)
+      }
+
+      setIsTransitioning(false)
+    }, 300)
   }
 
   const placeTeamsWithBacktracking = (
@@ -399,15 +406,20 @@ export default function DrawSimulator() {
   }
 
   const resetDraw = () => {
-    cancelDrawRef.current = true
-    setGroups([])
-    setCurrentDrawingTeam(null)
-    setAvailablePots(teamsData.pots)
-    setDrawMode(null)
-    setSelectedTeam(null)
-    setMovingFromGroup(null)
-    setCurrentPotIndex(0)
-    setIsDrawing(false)
+    setIsTransitioning(true)
+
+    setTimeout(() => {
+      cancelDrawRef.current = true
+      setGroups([])
+      setCurrentDrawingTeam(null)
+      setAvailablePots(teamsData.pots)
+      setDrawMode(null)
+      setSelectedTeam(null)
+      setMovingFromGroup(null)
+      setCurrentPotIndex(0)
+      setIsDrawing(false)
+      setIsTransitioning(false)
+    }, 300)
   }
 
   const completeDrawAutomatically = () => {
@@ -471,7 +483,9 @@ export default function DrawSimulator() {
 
       <div className="container mx-auto px-3 md:px-4 pb-6 md:pb-8 max-w-7xl">
         {!drawMode && (
-          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory">
+          <div
+            className={`flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory transition-opacity duration-300 ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+          >
             <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 flex-shrink-0 snap-center">
               <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Automático</span>
@@ -498,7 +512,9 @@ export default function DrawSimulator() {
         )}
 
         {drawMode && (
-          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory">
+          <div
+            className={`flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory transition-all duration-500 ${isTransitioning ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}
+          >
             <div className="px-3 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-xs md:text-sm flex-shrink-0 snap-center flex items-center">
               {isManualMode ? "Modo Manual" : isInstantMode ? "Modo Instantâneo" : "Modo Automático"}
             </div>
@@ -526,7 +542,9 @@ export default function DrawSimulator() {
         )}
 
         {currentDrawingTeam && (
-          <Card className="p-4 md:p-6 mb-4 md:mb-6 bg-primary text-primary-foreground animate-in fade-in zoom-in duration-300">
+          <Card
+            className={`p-4 md:p-6 mb-4 md:mb-6 bg-primary text-primary-foreground transition-all duration-500 ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+          >
             <div className="flex items-center justify-center gap-3">
               <span className="text-3xl md:text-4xl">{currentDrawingTeam.flag}</span>
               <div className="text-left">
@@ -538,7 +556,9 @@ export default function DrawSimulator() {
         )}
 
         {isManualMode && availablePots.length > 0 && (
-          <Card className="p-3 md:p-4 mb-4 md:mb-6 bg-accent/10 border-accent">
+          <Card
+            className={`p-3 md:p-4 mb-4 md:mb-6 bg-accent/10 border-accent transition-all duration-500 ${isTransitioning ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}
+          >
             <p className="text-sm md:text-base font-semibold mb-1">
               {selectedTeam
                 ? movingFromGroup !== null
@@ -558,8 +578,10 @@ export default function DrawSimulator() {
           !isInstantMode &&
           availablePots.length > 0 &&
           availablePots.some((pot) => pot.teams.length > 0) && (
-            <div className={`space-y-4 transition-all duration-500 ${selectedTeam ? "mb-4" : "mb-6 md:mb-8"}`}>
-              <h2 className="text-lg md:text-xl font-bold">Potes do Torneio</h2>
+            <div
+              className={`space-y-4 transition-all duration-500 ${selectedTeam ? "mb-4" : "mb-6 md:mb-8"} ${isTransitioning ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
+            >
+              <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Potes do Torneio</h2>
               {availablePots.map((pot, potIndex) => {
                 const shouldHidePot = selectedTeam && selectedTeam.potIndex !== potIndex
 
@@ -641,10 +663,26 @@ export default function DrawSimulator() {
           )}
 
         {shouldShowGroups && (
-          <div>
-            <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
-              {isManualMode ? "Sorteio em Andamento" : "Resultado do Sorteio"}
-            </h2>
+          <div
+            className={`transition-all duration-500 ${isTransitioning ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+              <h2 className="text-lg md:text-xl font-bold">
+                {isManualMode ? "Sorteio em Andamento" : "Resultado do Sorteio"}
+              </h2>
+              {isManualMode && hasRemainingTeams && (
+                <Button
+                  onClick={completeDrawAutomatically}
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5 flex-shrink-0"
+                >
+                  <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Completar</span>
+                </Button>
+              )}
+            </div>
+            {/* </CHANGE> */}
             <div className="flex gap-2 overflow-x-auto pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6">
               {groups.map((group, groupIndex) => {
                 const canPlace =
