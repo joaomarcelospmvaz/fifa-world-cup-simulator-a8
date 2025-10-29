@@ -21,9 +21,11 @@ type Pot = {
   teams: Team[]
 }
 
+type TeamWithPotIndex = Team & { potIndex: number }
+
 type Group = {
   name: string
-  teams: Team[]
+  teams: TeamWithPotIndex[]
 }
 
 type DrawMode = "automatic" | "manual" | "instant"
@@ -43,10 +45,10 @@ export default function DrawSimulator() {
   const groupsRef = useRef<HTMLDivElement>(null)
   const imageGroupsRef = useRef<HTMLDivElement>(null)
 
-  const initializeGroups = () => {
+  const initializeGroups = (): Group[] => {
     return Array.from({ length: 12 }, (_, i) => ({
       name: String.fromCharCode(65 + i), // A, B, C, etc.
-      teams: [],
+      teams: [] as TeamWithPotIndex[],
     }))
   }
 
@@ -84,19 +86,31 @@ export default function DrawSimulator() {
       return false
     }
 
-    // Get all teams from the pot we're trying to place from
-    const currentPotTeams = teamsData.pots[potIndex].teams
+    // Rule 2: Canada must be in Group B position 1
+    if (team.code === "CAN" && groupIndex !== 1) {
+      return false
+    }
+    if (groupIndex === 1 && group.teams.length === 0 && team.code !== "CAN") {
+      return false
+    }
 
-    // Check each team in the group
+    // Rule 3: USA must be in Group D position 1
+    if (team.code === "USA" && groupIndex !== 3) {
+      return false
+    }
+    if (groupIndex === 3 && group.teams.length === 0 && team.code !== "USA") {
+      return false
+    }
+    
+    // Check each team in the group for pot conflicts
     for (const teamInGroup of group.teams) {
       // Skip the team being moved if it's in this group
       if (excludeFromGroupIndex === groupIndex && teamInGroup.code === team.code) {
         continue
       }
 
-      // Check if this team in the group is from the same pot
-      const isFromSamePot = currentPotTeams.some((pt) => pt.code === teamInGroup.code)
-      if (isFromSamePot) {
+      // Check if the team in the group came from the same pot as the team we're trying to place
+      if (teamInGroup.potIndex === potIndex) {
         return false
       }
     }
@@ -166,34 +180,81 @@ export default function DrawSimulator() {
     groupsArray: Group[],
     allTeams: { team: Team; potIndex: number }[],
     teamIndex = 0,
+    maxAttempts = 1000
   ): Group[] | null => {
+    // Add attempt limit to prevent infinite loops
+    if (maxAttempts <= 0) {
+      return null;
+    }
+
     // Base case: all teams placed successfully
     if (teamIndex >= allTeams.length) {
-      return groupsArray
+      // Validate that all groups have exactly 4 teams
+      if (groupsArray.some(group => group.teams.length !== 4)) {
+        return null;
+      }
+      // Validate that we placed all 48 teams
+      const totalTeams = groupsArray.reduce((sum, group) => sum + group.teams.length, 0);
+      if (totalTeams !== 48) {
+        return null;
+      }
+      return groupsArray;
     }
 
     const { team, potIndex } = allTeams[teamIndex]
 
-    // Try placing this team in each group
-    for (let groupIndex = 0; groupIndex < 12; groupIndex++) {
-      if (canPlaceTeamInGroup(team, groupIndex, potIndex, groupsArray)) {
-        // Place the team
+    // Special handling for USA, Canada, and Mexico
+    if (team.code === "MEX" && !groupsArray[0].teams.some(t => t.code === "MEX")) {
+      if (canPlaceTeamInGroup(team, 0, potIndex, groupsArray)) {
         const newGroups = groupsArray.map((g, i) =>
-          i === groupIndex ? { ...g, teams: [...g.teams, team] } : { ...g, teams: [...g.teams] },
-        )
+          i === 0 ? { ...g, teams: [...g.teams, team] } : { ...g }
+        );
+        const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
+        if (result) return result;
+      }
+      return null;
+    }
 
-        // Recursively try to place remaining teams
-        const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1)
+    if (team.code === "CAN" && !groupsArray[1].teams.some(t => t.code === "CAN")) {
+      if (canPlaceTeamInGroup(team, 1, potIndex, groupsArray)) {
+        const newGroups = groupsArray.map((g, i) =>
+          i === 1 ? { ...g, teams: [...g.teams, team] } : { ...g }
+        );
+        const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
+        if (result) return result;
+      }
+      return null;
+    }
 
-        if (result) {
-          return result // Success!
-        }
+    if (team.code === "USA" && !groupsArray[3].teams.some(t => t.code === "USA")) {
+      if (canPlaceTeamInGroup(team, 3, potIndex, groupsArray)) {
+        const newGroups = groupsArray.map((g, i) =>
+          i === 3 ? { ...g, teams: [...g.teams, team] } : { ...g }
+        );
+        const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
+        if (result) return result;
+      }
+      return null;
+    }
 
-        // Backtrack: this placement didn't work, try next group
+    // For other teams, try each available group
+    const availableGroups = Array.from({ length: 12 }, (_, i) => i)
+      .filter(i => groupsArray[i].teams.length < 4);
+
+    // Shuffle available groups for better distribution
+    const shuffledGroups = shuffleArray(availableGroups);
+
+    for (const groupIndex of shuffledGroups) {
+      if (canPlaceTeamInGroup(team, groupIndex, potIndex, groupsArray)) {
+        const newGroups = groupsArray.map((g, i) =>
+          i === groupIndex ? { ...g, teams: [...g.teams, team as TeamWithPotIndex] } : { ...g }
+        );
+
+        const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
+        if (result) return result;
       }
     }
 
-    // No valid placement found for this team
     return null
   }
 
@@ -202,12 +263,12 @@ export default function DrawSimulator() {
     const newGroups = initializeGroups()
 
     // Prepare all teams with their pot indices
-    const allTeams: { team: Team; potIndex: number }[] = []
+    const allTeams: { team: Team & { potIndex: number }; potIndex: number }[] = []
 
     // Mexico must be first (Group A position 1)
     const mexicoTeam = teamsData.pots[0].teams.find((t) => t.code === "MEX")
     if (mexicoTeam) {
-      allTeams.push({ team: { ...mexicoTeam, potIndex: 0 }, potIndex: 0 }) // Store potIndex in team
+      allTeams.push({ team: { ...mexicoTeam, potIndex: 0 }, potIndex: 0 })
     }
 
     // Add all other teams
@@ -259,7 +320,7 @@ export default function DrawSimulator() {
         const { team } = allTeams[j]
         const groupIndex = result.findIndex((g) => g.teams.some((t) => t.code === team.code))
         if (groupIndex !== -1) {
-          progressGroups[groupIndex].teams.push(team) // Team already has potIndex stored
+          progressGroups[groupIndex].teams.push(team as TeamWithPotIndex)
         }
       }
       setGroups([...progressGroups])
@@ -425,24 +486,101 @@ export default function DrawSimulator() {
   }
 
   const completeDrawAutomatically = () => {
-    const currentGroups = [...groups]
+    // Validate current state
+    const currentTeamCount = groups.reduce((sum, group) => sum + group.teams.length, 0);
+    const remainingTeamsNeeded = 48 - currentTeamCount;
+    
+    if (remainingTeamsNeeded <= 0) {
+      console.error("[v0] Invalid state: too many teams placed");
+      return;
+    }
+
+    // Deep clone the current groups to avoid mutation issues
+    const currentGroups = groups.map(group => ({
+      ...group,
+      teams: [...group.teams]
+    }));
 
     const remainingTeams: { team: Team; potIndex: number }[] = []
-
+    
+    // Track which special teams we still need to place
+    const needMexico = !currentGroups[0].teams.some(t => t.code === "MEX")
+    const needCanada = !currentGroups[1].teams.some(t => t.code === "CAN")
+    const needUSA = !currentGroups[3].teams.some(t => t.code === "USA")
+    
+    // Process each pot
     for (let potIndex = 0; potIndex < availablePots.length; potIndex++) {
       const pot = availablePots[potIndex]
-      const shuffledTeams = shuffleArray([...pot.teams])
+      
+      // First handle special teams if they're in this pot and still needed
+      if (needMexico) {
+        const mexTeam = pot.teams.find(t => t.code === "MEX")
+        if (mexTeam) {
+          remainingTeams.push({ team: { ...mexTeam, potIndex }, potIndex })
+        }
+      }
+      
+      if (needCanada) {
+        const canTeam = pot.teams.find(t => t.code === "CAN")
+        if (canTeam) {
+          remainingTeams.push({ team: { ...canTeam, potIndex }, potIndex })
+        }
+      }
+      
+      if (needUSA) {
+        const usaTeam = pot.teams.find(t => t.code === "USA")
+        if (usaTeam) {
+          remainingTeams.push({ team: { ...usaTeam, potIndex }, potIndex })
+        }
+      }
+      
+      // Then add all other teams from this pot
+      const otherTeams = pot.teams.filter(t => 
+        t.code !== "MEX" || !needMexico)
+        .filter(t => t.code !== "CAN" || !needCanada)
+        .filter(t => t.code !== "USA" || !needUSA)
+      
+      const shuffledTeams = shuffleArray([...otherTeams])
       shuffledTeams.forEach((team) => {
-        remainingTeams.push({ team: { ...team, potIndex }, potIndex }) // Store potIndex in team
+        remainingTeams.push({ team: { ...team, potIndex }, potIndex })
       })
     }
 
-    const result = placeTeamsWithBacktracking(currentGroups, remainingTeams)
+    // Count total teams available
+    const totalAvailableTeams = remainingTeams.length;
+    if (totalAvailableTeams !== remainingTeamsNeeded) {
+      console.error("[v0] Mismatch in remaining teams count");
+      alert("Erro no número de seleções disponíveis. Tente reiniciar o sorteio.");
+      return;
+    }
+
+    // Try to complete the draw with multiple attempts if needed
+    let result = null;
+    let attempts = 5; // Try up to 5 times with different shuffles
+
+    while (attempts > 0 && !result) {
+      result = placeTeamsWithBacktracking(currentGroups, remainingTeams);
+      if (!result) {
+        // Reshuffle teams and try again
+        remainingTeams.sort(() => Math.random() - 0.5);
+        attempts--;
+      }
+    }
 
     if (!result) {
       console.error("[v0] Failed to complete draw - try resetting and starting over")
       alert("Não foi possível completar o sorteio com as seleções já colocadas. Tente reiniciar o sorteio.")
       return
+    }
+
+    // Validate final state
+    const finalTeamCount = result.reduce((sum, group) => sum + group.teams.length, 0);
+    const allGroupsComplete = result.every(group => group.teams.length === 4);
+
+    if (finalTeamCount !== 48 || !allGroupsComplete) {
+      console.error("[v0] Invalid final state", { finalTeamCount, allGroupsComplete });
+      alert("Erro na distribuição final das seleções. Tente reiniciar o sorteio.");
+      return;
     }
 
     setGroups(result)
@@ -462,91 +600,232 @@ export default function DrawSimulator() {
     }
   }
 
-  const generateShareImage = async () => {
-    console.log("[v0] Starting image generation...")
-
+  const generateShareImage = () => {
     try {
-      console.log("[v0] Creating canvas...")
-
+      // Create canvas with social media optimized dimensions
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
       if (!ctx) {
-        console.error("[v0] Failed to get canvas context")
-        alert("Erro ao criar canvas. Tente novamente.")
+        console.error("Failed to get canvas context")
+        alert("Erro ao criar imagem. Tente novamente.")
         return
       }
+      
+      // Set initial canvas dimensions
+      canvas.width = 1200
+      canvas.height = 1600
+      
+      // Layout measurements
+      const layout = {
+        headerHeight: 300,
+        margin: 60,
+        totalCols: 3,
+        totalRows: 4,
+        horizontalGap: 40,
+        verticalGap: 40
+      }
 
-      canvas.width = 2800
-      canvas.height = 2000
+      // White background
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      canvas.width = 1200
+      canvas.height = 1600
 
       // Background
       ctx.fillStyle = "#ffffff"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Title
+      // Add date
+      ctx.fillStyle = "#666666";
+      ctx.font = "16px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "right";
+      const date = new Date().toLocaleDateString('pt-BR');
+      ctx.fillText(date, canvas.width - 40, 85);
+
+      // Main title with shadow
+      ctx.save()
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.2)'
+      ctx.shadowBlur = 4
+      ctx.shadowOffsetY = 2
       ctx.fillStyle = "#16a34a"
-      ctx.font = "bold 64px system-ui, -apple-system, sans-serif"
+      ctx.font = "bold 56px system-ui, -apple-system, sans-serif"
       ctx.textAlign = "center"
-      ctx.fillText("Copa do Mundo FIFA 2026", canvas.width / 2, 100)
+      ctx.fillText("Sorteio Copa do Mundo 2026", canvas.width / 2, 100)
+      ctx.restore()
 
+      // Subtitle
       ctx.fillStyle = "#666666"
-      ctx.font = "36px system-ui, -apple-system, sans-serif"
-      ctx.fillText("Resultado do Sorteio", canvas.width / 2, 160)
+      ctx.font = "28px system-ui, -apple-system, sans-serif"
+      ctx.fillText("Definição dos Grupos", canvas.width / 2, 150)
+      
+      // Decorative line
+      const lineWidth = 300
+      ctx.beginPath()
+      ctx.moveTo(canvas.width / 2 - lineWidth, 190)
+      ctx.lineTo(canvas.width / 2 + lineWidth, 190)
+      ctx.strokeStyle = "#e5e7eb"
+      ctx.lineWidth = 2
+      ctx.stroke()
 
-      // Canvas: 2800px wide, 2000px tall
-      // 4 columns: (2800 - 200 margin) / 4 = 650px per column
-      // Group width: 550px, Gap: 100px between groups
-      const groupWidth = 550
-      const groupHeight = 450
-      const gap = 100
-      const startX = 100
-      const startY = 250
-      const cols = 4
+      // Adjust canvas dimensions for better macOS display and branding
+      canvas.width = 1200
+      canvas.height = 1600
+
+      // Create gradient background
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGradient.addColorStop(0, '#ffffff');
+      bgGradient.addColorStop(1, '#f8fafc');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Add Lance.com.br branding text instead of logo
+      ctx.save();
+      ctx.fillStyle = "#111111";
+      ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("LANCE!", canvas.width - 40, 60);
+      ctx.restore();      // Header section (top area)
+      const headerHeight = 300
+      const margin = 60
+      
+      // Draw main title
+      ctx.save()
+      ctx.fillStyle = "#16a34a"
+      ctx.font = "bold 72px system-ui, -apple-system, sans-serif"
+      ctx.textAlign = "center"
+      ctx.shadowColor = "rgba(0, 0, 0, 0.2)"
+      ctx.shadowBlur = 4
+      ctx.shadowOffsetY = 2
+      ctx.fillText("Sorteio Copa do Mundo 2026", canvas.width / 2, 120)
+      ctx.restore()
+
+      // Draw Lance! branding
+      ctx.save()
+      ctx.fillStyle = "#111111"
+      ctx.font = "bold 36px system-ui, -apple-system, sans-serif"
+      ctx.textAlign = "right"
+      ctx.fillText("LANCE!", canvas.width - margin, 60)
+      
+      // Add date
+      ctx.font = "20px system-ui, -apple-system, sans-serif"
+      ctx.fillStyle = "#666666"
+      ctx.fillText(new Date().toLocaleDateString('pt-BR'), canvas.width - margin, 90)
+      ctx.restore()
+
+      // Add separator line
+      ctx.beginPath()
+      ctx.moveTo(layout.margin, 180)
+      ctx.lineTo(canvas.width - layout.margin, 180)
+      ctx.strokeStyle = "#e5e7eb"
+      ctx.lineWidth = 2
+      ctx.stroke()
+      
+      // Calculate available space
+      const availableWidth = canvas.width - (layout.margin * 2)
+      const availableHeight = canvas.height - layout.headerHeight - layout.margin
+      
+      // Calculate group dimensions
+      const groupWidth = Math.floor((availableWidth - (layout.horizontalGap * (layout.totalCols - 1))) / layout.totalCols)
+      const groupHeight = Math.floor((availableHeight - (layout.verticalGap * (layout.totalRows - 1))) / layout.totalRows)
+      
+      // Starting position for groups
+      const startX = layout.margin
+      const startY = layout.headerHeight
+      const cols = 3
+
+      // Better background
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(1, '#f8f9fa');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       for (let i = 0; i < groups.length; i++) {
         const group = groups[i]
         const col = i % cols
         const row = Math.floor(i / cols)
-        const x = startX + col * (groupWidth + gap)
-        const y = startY + row * (groupHeight + gap)
+        const x = startX + col * (groupWidth + layout.horizontalGap)
+        const y = startY + row * (groupHeight + layout.verticalGap)
 
         // Group border
         ctx.strokeStyle = "#e5e7eb"
         ctx.lineWidth = 4
         ctx.strokeRect(x, y, groupWidth, groupHeight)
 
-        // Group header circle
-        ctx.fillStyle = "#16a34a"
-        ctx.beginPath()
-        ctx.arc(x + groupWidth / 2, y + 60, 36, 0, Math.PI * 2)
-        ctx.fill()
+      // Draw group card background with shadow
+      ctx.save()
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
+      ctx.shadowBlur = 20
+      ctx.shadowOffsetY = 5
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.roundRect(x, y, groupWidth, groupHeight, 16)
+      ctx.fill()
+      ctx.restore()
 
-        // Group letter
-        ctx.fillStyle = "#ffffff"
-        ctx.font = "bold 36px system-ui, -apple-system, sans-serif"
-        ctx.textAlign = "center"
-        ctx.fillText(group.name, x + groupWidth / 2, y + 70)
+      // Group header pill
+      const headerPillHeight = 50
+      const headerPillWidth = groupWidth - 40
+      const headerY = y + 25
+      
+      // Draw pill background
+      ctx.save()
+      ctx.fillStyle = "#16a34a"
+      ctx.beginPath()
+      ctx.roundRect(x + (groupWidth - headerPillWidth) / 2, headerY, headerPillWidth, headerPillHeight, headerPillHeight / 2)
+      ctx.fill()
 
-        // Group label
-        ctx.fillStyle = "#000000"
-        ctx.font = "bold 32px system-ui, -apple-system, sans-serif"
-        ctx.fillText(`Grupo ${group.name}`, x + groupWidth / 2, y + 120)
+      // Draw group text
+      ctx.fillStyle = "#ffffff"
+      ctx.font = "bold 32px system-ui, -apple-system, sans-serif"
+      ctx.textAlign = "center"
+      ctx.fillText(`Grupo ${group.name}`, x + groupWidth / 2, headerY + 35)
+      ctx.restore()        // Draw teams in 2x2 grid
+      // Team card dimensions
+      const teamPadding = 20
+      const teamGap = 15
+      const headerSpace = 100 // Space for group header
+      
+      // Calculate team card size to fit within group
+      const teamWidth = Math.floor((groupWidth - (3 * teamPadding)) / 2)
+      const teamHeight = Math.floor((groupHeight - headerSpace - (3 * teamPadding)) / 2)
+      
+      // Position teams within group
+      const teamStartX = x + teamPadding
+      const teamStartY = y + headerSpace
 
-        // Draw teams in 2x2 grid
-        const teamWidth = 240
-        const teamHeight = 140
-        const teamGap = 30
-        const teamStartX = x + 30
-        const teamStartY = y + 160
+      // Draw group card background with stronger shadow
+      ctx.save()
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
+      ctx.shadowBlur = 15
+      ctx.shadowOffsetY = 4
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.roundRect(x, y, groupWidth, groupHeight, 12)
+      ctx.fill()
+      ctx.restore()
 
-        for (let j = 0; j < group.teams.length; j++) {
-          const team = group.teams[j]
-          const teamCol = j % 2
-          const teamRow = Math.floor(j / 2)
-          const teamX = teamStartX + teamCol * (teamWidth + teamGap)
-          const teamY = teamStartY + teamRow * (teamHeight + teamGap)
+      // Add subtle gradient to group background
+      const gradient = ctx.createLinearGradient(x, y, x, y + groupHeight)
+      gradient.addColorStop(0, '#ffffff')
+      gradient.addColorStop(1, '#f8f9fa')
+      ctx.fillStyle = gradient
+      ctx.fill()
 
-          // Team background
+      // Group border
+      ctx.strokeStyle = "#e5e7eb"
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.roundRect(x, y, groupWidth, groupHeight, 12)
+      ctx.stroke()
+
+      for (let j = 0; j < group.teams.length; j++) {
+        const team = group.teams[j]
+        const teamCol = j % 2
+        const teamRow = Math.floor(j / 2)
+        const teamX = teamStartX + teamCol * (teamWidth + teamGap)
+        const teamY = teamStartY + teamRow * (teamHeight + teamGap)          // Team background
           ctx.fillStyle = "#f9fafb"
           ctx.fillRect(teamX, teamY, teamWidth, teamHeight)
           ctx.strokeStyle = "#e5e7eb"
@@ -575,61 +854,16 @@ export default function DrawSimulator() {
       console.log("[v0] Canvas drawn successfully")
 
       // Convert to data URL
+      // Convert to data URL and trigger download
       const dataUrl = canvas.toDataURL("image/png")
-      console.log("[v0] Data URL created")
-
-      // Open in new window for Safari compatibility
-      const newWindow = window.open()
-      if (newWindow) {
-        newWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Copa do Mundo FIFA 2026 - Sorteio</title>
-              <style>
-                body {
-                  margin: 0;
-                  padding: 20px;
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  justify-content: center;
-                  min-height: 100vh;
-                  background: #f3f4f6;
-                  font-family: system-ui, -apple-system, sans-serif;
-                }
-                img {
-                  max-width: 100%;
-                  height: auto;
-                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                  border-radius: 8px;
-                  background: white;
-                }
-                p {
-                  margin-top: 20px;
-                  color: #666;
-                  text-align: center;
-                }
-              </style>
-            </head>
-            <body>
-              <img src="${dataUrl}" alt="Copa do Mundo FIFA 2026 - Sorteio" />
-              <p>Clique com o botão direito na imagem e selecione "Salvar imagem como..." para baixar</p>
-            </body>
-          </html>
-        `)
-        newWindow.document.close()
-        console.log("[v0] Image opened in new window")
-      } else {
-        // Fallback: try download if popup was blocked
-        console.log("[v0] Popup blocked, trying download...")
-        const link = document.createElement("a")
-        link.href = dataUrl
-        link.download = `copa-mundial-2026-sorteio-${new Date().getTime()}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-      }
+      
+      // Create download link
+      const link = document.createElement("a")
+      link.href = dataUrl
+      link.download = `sorteio-copa-2026-${new Date().getTime()}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
 
       console.log("[v0] Image generation completed")
     } catch (error) {
@@ -651,7 +885,7 @@ export default function DrawSimulator() {
       <div className="bg-primary text-primary-foreground py-4 md:py-6 mb-4 md:mb-6 shadow-sm">
         <div className="container mx-auto px-3 md:px-4 max-w-7xl">
           <div className="flex items-center justify-center gap-2 md:gap-3">
-            <Trophy className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0" />
+            <Trophy className="w-8 h-8 md:w-10 md:h-10 shrink-0" />
             <div className="text-center">
               <h1 className="text-xl md:text-3xl lg:text-4xl font-bold leading-tight">Copa do Mundo FIFA 2026</h1>
               <p className="text-sm md:text-lg opacity-90">Simulador de Sorteio</p>
@@ -667,7 +901,7 @@ export default function DrawSimulator() {
           >
             <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-center">Tipos de Simulação</h2>
             <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory">
-              <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 flex-shrink-0 snap-center">
+              <Button onClick={() => startDraw("automatic")} size="lg" className="gap-2 shrink-0 snap-center">
                 <Shuffle className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="text-sm md:text-base">Automático</span>
               </Button>
@@ -675,7 +909,7 @@ export default function DrawSimulator() {
                 onClick={() => startDraw("instant")}
                 variant="secondary"
                 size="lg"
-                className="gap-2 flex-shrink-0 snap-center"
+                className="gap-2 shrink-0 snap-center"
               >
                 <Zap className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="text-sm md:text-base">Instantâneo</span>
@@ -684,7 +918,7 @@ export default function DrawSimulator() {
                 onClick={() => startDraw("manual")}
                 variant="outline"
                 size="lg"
-                className="gap-2 flex-shrink-0 snap-center"
+                className="gap-2 shrink-0 snap-center"
               >
                 <Hand className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="text-sm md:text-base">Manual</span>
@@ -697,7 +931,7 @@ export default function DrawSimulator() {
           <div
             className={`flex gap-2 md:gap-3 overflow-x-auto pb-2 mb-4 md:mb-6 snap-x snap-mandatory transition-all duration-500 ${isTransitioning ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}
           >
-            <div className="px-3 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-xs md:text-sm flex-shrink-0 snap-center flex items-center">
+            <div className="px-3 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-xs md:text-sm shrink-0 snap-center flex items-center">
               {isManualMode ? "Modo Manual" : isInstantMode ? "Modo Instantâneo" : "Modo Automático"}
             </div>
             {isManualMode && hasRemainingTeams && (
@@ -705,7 +939,7 @@ export default function DrawSimulator() {
                 onClick={completeDrawAutomatically}
                 variant="secondary"
                 size="lg"
-                className="gap-2 flex-shrink-0 snap-center"
+                className="gap-2 shrink-0 snap-center"
               >
                 <Zap className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="text-sm md:text-base">Completar</span>
@@ -715,7 +949,7 @@ export default function DrawSimulator() {
               onClick={resetDraw}
               variant="outline"
               size="lg"
-              className="gap-2 bg-transparent flex-shrink-0 snap-center"
+              className="gap-2 bg-transparent shrink-0 snap-center"
             >
               <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Reiniciar</span>
@@ -811,7 +1045,7 @@ export default function DrawSimulator() {
                               key={teamIndex}
                               onClick={() => isManualMode && handleTeamSelect(team, potIndex)}
                               disabled={!isManualMode || pot.teams.length === 0}
-                              className={`flex-shrink-0 w-24 md:w-28 snap-center transition-all ${
+                              className={`shrink-0 w-24 md:w-28 snap-center transition-all ${
                                 isManualMode && pot.teams.length > 0
                                   ? "hover:scale-105 cursor-pointer active:scale-95"
                                   : "cursor-not-allowed"
@@ -858,7 +1092,7 @@ export default function DrawSimulator() {
                   onClick={completeDrawAutomatically}
                   variant="default"
                   size="sm"
-                  className="gap-1.5 flex-shrink-0"
+                  className="gap-1.5 shrink-0"
                 >
                   <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   <span className="text-xs md:text-sm">Completar</span>
@@ -875,7 +1109,7 @@ export default function DrawSimulator() {
                   <Card
                     key={groupIndex}
                     onClick={() => isManualMode && selectedTeam && handleGroupSelect(groupIndex)}
-                    className={`p-2 flex-shrink-0 w-32 md:w-auto snap-center animate-in fade-in slide-in-from-bottom-4 duration-500 transition-all ${
+                    className={`p-2 shrink-0 w-32 md:w-auto snap-center animate-in fade-in slide-in-from-bottom-4 duration-500 transition-all ${
                       isManualMode && selectedTeam
                         ? canPlace
                           ? "cursor-pointer hover:ring-2 hover:ring-primary hover:shadow-lg active:scale-95"
@@ -905,7 +1139,7 @@ export default function DrawSimulator() {
                               : "hover:bg-accent/50"
                           } ${selectedTeam?.team.code === team.code && movingFromGroup === groupIndex ? "ring-1 ring-primary bg-accent" : ""}`}
                         >
-                          <span className="text-sm md:text-base flex-shrink-0">{team.flag}</span>
+                          <span className="text-sm md:text-base shrink-0">{team.flag}</span>
                           <p className="font-semibold text-[8px] md:text-[9px] text-center leading-tight line-clamp-1">
                             {team.name}
                           </p>
@@ -921,7 +1155,7 @@ export default function DrawSimulator() {
                         Array.from({ length: 4 - group.teams.length }).map((_, i) => (
                           <div
                             key={`empty-${i}`}
-                            className="p-1 rounded-md border border-dashed border-muted-foreground/20 text-center text-muted-foreground text-[8px] flex items-center justify-center min-h-[3rem]"
+                            className="p-1 rounded-md border border-dashed border-muted-foreground/20 text-center text-muted-foreground text-[8px] flex items-center justify-center min-h-12"
                           >
                             Vaga
                           </div>
