@@ -476,8 +476,8 @@ export default function DrawSimulator() {
         return
       }
 
-      canvas.width = 3200
-      canvas.height = 2200
+      canvas.width = 2800
+      canvas.height = 2000
 
       // Background
       ctx.fillStyle = "#ffffff"
@@ -493,15 +493,15 @@ export default function DrawSimulator() {
       ctx.font = "36px system-ui, -apple-system, sans-serif"
       ctx.fillText("Resultado do Sorteio", canvas.width / 2, 160)
 
-      // Canvas: 3200px wide, 2200px tall
-      // 4 columns with proper margins and gaps
-      const groupWidth = 650
-      const groupHeight = 500
-      const gap = 150
-      const startX = 150
-      const startY = 280
+      // Canvas: 2800px wide, 2000px tall
+      // 4 columns: (2800 - 200 margin) / 4 = 650px per column
+      // Group width: 550px, Gap: 100px between groups
+      const groupWidth = 550
+      const groupHeight = 450
+      const gap = 100
+      const startX = 100
+      const startY = 250
       const cols = 4
-      // Math: 150 + 4 * (650 + 150) - 150 = 150 + 3200 - 150 = 3200px (fits perfectly)
 
       for (let i = 0; i < groups.length; i++) {
         const group = groups[i]
@@ -518,26 +518,26 @@ export default function DrawSimulator() {
         // Group header circle
         ctx.fillStyle = "#16a34a"
         ctx.beginPath()
-        ctx.arc(x + groupWidth / 2, y + 70, 40, 0, Math.PI * 2)
+        ctx.arc(x + groupWidth / 2, y + 60, 36, 0, Math.PI * 2)
         ctx.fill()
 
         // Group letter
         ctx.fillStyle = "#ffffff"
-        ctx.font = "bold 40px system-ui, -apple-system, sans-serif"
+        ctx.font = "bold 36px system-ui, -apple-system, sans-serif"
         ctx.textAlign = "center"
-        ctx.fillText(group.name, x + groupWidth / 2, y + 80)
+        ctx.fillText(group.name, x + groupWidth / 2, y + 70)
 
         // Group label
         ctx.fillStyle = "#000000"
-        ctx.font = "bold 36px system-ui, -apple-system, sans-serif"
-        ctx.fillText(`Grupo ${group.name}`, x + groupWidth / 2, y + 140)
+        ctx.font = "bold 32px system-ui, -apple-system, sans-serif"
+        ctx.fillText(`Grupo ${group.name}`, x + groupWidth / 2, y + 120)
 
         // Draw teams in 2x2 grid
-        const teamWidth = 280
-        const teamHeight = 150
-        const teamGap = 40
-        const teamStartX = x + 40
-        const teamStartY = y + 190
+        const teamWidth = 240
+        const teamHeight = 140
+        const teamGap = 30
+        const teamStartX = x + 30
+        const teamStartY = y + 160
 
         for (let j = 0; j < group.teams.length; j++) {
           const team = group.teams[j]
@@ -554,21 +554,21 @@ export default function DrawSimulator() {
           ctx.strokeRect(teamX, teamY, teamWidth, teamHeight)
 
           // Team flag (emoji)
-          ctx.font = "52px system-ui, -apple-system, sans-serif"
+          ctx.font = "48px system-ui, -apple-system, sans-serif"
           ctx.textAlign = "center"
-          ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 60)
+          ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 55)
 
           // Team name
           ctx.fillStyle = "#000000"
-          ctx.font = "600 26px system-ui, -apple-system, sans-serif"
+          ctx.font = "600 24px system-ui, -apple-system, sans-serif"
           ctx.textAlign = "center"
           const teamName = team.name.length > 13 ? team.name.substring(0, 11) + "..." : team.name
-          ctx.fillText(teamName, teamX + teamWidth / 2, teamY + 105)
+          ctx.fillText(teamName, teamX + teamWidth / 2, teamY + 95)
 
           // Confederation
           ctx.fillStyle = "#666666"
-          ctx.font = "20px system-ui, -apple-system, sans-serif"
-          ctx.fillText(team.confederation, teamX + teamWidth / 2, teamY + 132)
+          ctx.font = "18px system-ui, -apple-system, sans-serif"
+          ctx.fillText(team.confederation, teamX + teamWidth / 2, teamY + 120)
         }
       }
 
