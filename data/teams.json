@@ -3,69 +3,69 @@
     {
       "name": "Pot 1",
       "teams": [
-        { "name": "Argentina", "code": "ARG", "flag": "🇦🇷", "logo": "/flags/arg.svg", "confederation": "CONMEBOL" },
-        { "name": "France", "code": "FRA", "flag": "🇫🇷", "confederation": "UEFA" },
-        { "name": "Spain", "code": "ESP", "flag": "🇪🇸", "confederation": "UEFA" },
-        { "name": "England", "code": "ENG", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "confederation": "UEFA" },
-        { "name": "Brazil", "code": "BRA", "flag": "🇧🇷", "confederation": "CONMEBOL" },
-        { "name": "Belgium", "code": "BEL", "flag": "🇧🇪", "confederation": "UEFA" },
-        { "name": "Portugal", "code": "POR", "flag": "🇵🇹", "confederation": "UEFA" },
-        { "name": "Netherlands", "code": "NED", "flag": "🇳🇱", "confederation": "UEFA" },
-        { "name": "USA", "code": "USA", "flag": "🇺🇸", "confederation": "CONCACAF" },
-        { "name": "Mexico", "code": "MEX", "flag": "🇲🇽", "confederation": "CONCACAF" },
-        { "name": "Canada", "code": "CAN", "flag": "🇨🇦", "confederation": "CONCACAF" },
-        { "name": "Germany", "code": "GER", "flag": "🇩🇪", "confederation": "UEFA" }
+        { "name": "Argentina", "code": "ARG", "flag": "🇦🇷", "logo": "https://flagcdn.com/w40/ar.png", "confederation": "CONMEBOL" },
+        { "name": "France", "code": "FRA", "flag": "🇫🇷", "logo": "https://flagcdn.com/w40/fr.png", "confederation": "UEFA" },
+        { "name": "Spain", "code": "ESP", "flag": "🇪🇸", "logo": "https://flagcdn.com/w40/es.png", "confederation": "UEFA" },
+        { "name": "England", "code": "ENG", "flag": "🏴", "logo": "https://flagcdn.com/w40/gb-eng.png", "confederation": "UEFA" },
+        { "name": "Brazil", "code": "BRA", "flag": "🇧🇷", "logo": "https://flagcdn.com/w40/br.png", "confederation": "CONMEBOL" },
+        { "name": "Belgium", "code": "BEL", "flag": "🇧🇪", "logo": "https://flagcdn.com/w40/be.png", "confederation": "UEFA" },
+        { "name": "Portugal", "code": "POR", "flag": "🇵🇹", "logo": "https://flagcdn.com/w40/pt.png", "confederation": "UEFA" },
+        { "name": "Netherlands", "code": "NED", "flag": "🇳🇱", "logo": "https://flagcdn.com/w40/nl.png", "confederation": "UEFA" },
+        { "name": "USA", "code": "USA", "flag": "🇺🇸", "logo": "https://flagcdn.com/w40/us.png", "confederation": "CONCACAF" },
+        { "name": "Mexico", "code": "MEX", "flag": "🇲🇽", "logo": "https://flagcdn.com/w40/mx.png", "confederation": "CONCACAF" },
+        { "name": "Canada", "code": "CAN", "flag": "🇨🇦", "logo": "https://flagcdn.com/w40/ca.png", "confederation": "CONCACAF" },
+        { "name": "Germany", "code": "GER", "flag": "🇩🇪", "logo": "https://flagcdn.com/w40/de.png", "confederation": "UEFA" }
       ]
     },
     {
       "name": "Pot 2",
       "teams": [
-        { "name": "Italy", "code": "ITA", "flag": "🇮🇹", "confederation": "UEFA" },
-        { "name": "Croatia", "code": "CRO", "flag": "🇭🇷", "confederation": "UEFA" },
-        { "name": "Uruguay", "code": "URU", "flag": "🇺🇾", "confederation": "CONMEBOL" },
-        { "name": "Denmark", "code": "DEN", "flag": "🇩🇰", "confederation": "UEFA" },
-        { "name": "Switzerland", "code": "SUI", "flag": "🇨🇭", "confederation": "UEFA" },
-        { "name": "Colombia", "code": "COL", "flag": "🇨🇴", "confederation": "CONMEBOL" },
-        { "name": "Senegal", "code": "SEN", "flag": "🇸🇳", "confederation": "CAF" },
-        { "name": "Japan", "code": "JPN", "flag": "🇯🇵", "confederation": "AFC" },
-        { "name": "Morocco", "code": "MAR", "flag": "🇲🇦", "confederation": "CAF" },
-        { "name": "South Korea", "code": "KOR", "flag": "🇰🇷", "confederation": "AFC" },
-        { "name": "Poland", "code": "POL", "flag": "🇵🇱", "confederation": "UEFA" },
-        { "name": "Sweden", "code": "SWE", "flag": "🇸🇪", "confederation": "UEFA" }
+        { "name": "Italy", "code": "ITA", "flag": "🇮🇹", "logo": "https://flagcdn.com/w40/it.png", "confederation": "UEFA" },
+        { "name": "Croatia", "code": "CRO", "flag": "🇭🇷", "logo": "https://flagcdn.com/w40/hr.png", "confederation": "UEFA" },
+        { "name": "Uruguay", "code": "URU", "flag": "🇺🇾", "logo": "https://flagcdn.com/w40/uy.png", "confederation": "CONMEBOL" },
+        { "name": "Denmark", "code": "DEN", "flag": "🇩🇰", "logo": "https://flagcdn.com/w40/dk.png", "confederation": "UEFA" },
+        { "name": "Switzerland", "code": "SUI", "flag": "🇨🇭", "logo": "https://flagcdn.com/w40/ch.png", "confederation": "UEFA" },
+        { "name": "Colombia", "code": "COL", "flag": "🇨🇴", "logo": "https://flagcdn.com/w40/co.png", "confederation": "CONMEBOL" },
+        { "name": "Senegal", "code": "SEN", "flag": "🇸🇳", "logo": "https://flagcdn.com/w40/sn.png", "confederation": "CAF" },
+        { "name": "Japan", "code": "JPN", "flag": "🇯🇵", "logo": "https://flagcdn.com/w40/jp.png", "confederation": "AFC" },
+        { "name": "Morocco", "code": "MAR", "flag": "🇲🇦", "logo": "https://flagcdn.com/w40/ma.png", "confederation": "CAF" },
+        { "name": "South Korea", "code": "KOR", "flag": "🇰🇷", "logo": "https://flagcdn.com/w40/kr.png", "confederation": "AFC" },
+        { "name": "Poland", "code": "POL", "flag": "🇵🇱", "logo": "https://flagcdn.com/w40/pl.png", "confederation": "UEFA" },
+        { "name": "Sweden", "code": "SWE", "flag": "🇸🇪", "logo": "https://flagcdn.com/w40/se.png", "confederation": "UEFA" }
       ]
     },
     {
       "name": "Pot 3",
       "teams": [
-        { "name": "Australia", "code": "AUS", "flag": "🇦🇺", "confederation": "AFC" },
-        { "name": "Egypt", "code": "EGY", "flag": "🇪🇬", "confederation": "CAF" },
-        { "name": "Nigeria", "code": "NGA", "flag": "🇳🇬", "confederation": "CAF" },
-        { "name": "Costa Rica", "code": "CRC", "flag": "🇨🇷", "confederation": "CONCACAF" },
-        { "name": "Tunisia", "code": "TUN", "flag": "🇹🇳", "confederation": "CAF" },
-        { "name": "Algeria", "code": "ALG", "flag": "🇩🇿", "confederation": "CAF" },
-        { "name": "Cameroon", "code": "CMR", "flag": "🇨🇲", "confederation": "CAF" },
-        { "name": "Ecuador", "code": "ECU", "flag": "🇪🇨", "confederation": "CONMEBOL" },
-        { "name": "Mali", "code": "MLI", "flag": "🇲🇱", "confederation": "CAF" },
-        { "name": "Iran", "code": "IRN", "flag": "🇮🇷", "confederation": "AFC" },
-        { "name": "Peru", "code": "PER", "flag": "🇵🇪", "confederation": "CONMEBOL" },
-        { "name": "Ghana", "code": "GHA", "flag": "🇬🇭", "confederation": "CAF" }
+        { "name": "Australia", "code": "AUS", "flag": "🇦🇺", "logo": "https://flagcdn.com/w40/au.png", "confederation": "AFC" },
+        { "name": "Egypt", "code": "EGY", "flag": "🇪🇬", "logo": "https://flagcdn.com/w40/eg.png", "confederation": "CAF" },
+        { "name": "Nigeria", "code": "NGA", "flag": "🇳🇬", "logo": "https://flagcdn.com/w40/ng.png", "confederation": "CAF" },
+        { "name": "Costa Rica", "code": "CRC", "flag": "🇨🇷", "logo": "https://flagcdn.com/w40/cr.png", "confederation": "CONCACAF" },
+        { "name": "Tunisia", "code": "TUN", "flag": "🇹🇳", "logo": "https://flagcdn.com/w40/tn.png", "confederation": "CAF" },
+        { "name": "Algeria", "code": "ALG", "flag": "🇩🇿", "logo": "https://flagcdn.com/w40/dz.png", "confederation": "CAF" },
+        { "name": "Cameroon", "code": "CMR", "flag": "🇨🇲", "logo": "https://flagcdn.com/w40/cm.png", "confederation": "CAF" },
+        { "name": "Ecuador", "code": "ECU", "flag": "🇪🇨", "logo": "https://flagcdn.com/w40/ec.png", "confederation": "CONMEBOL" },
+        { "name": "Mali", "code": "MLI", "flag": "🇲🇱", "logo": "https://flagcdn.com/w40/ml.png", "confederation": "CAF" },
+        { "name": "Iran", "code": "IRN", "flag": "🇮🇷", "logo": "https://flagcdn.com/w40/ir.png", "confederation": "AFC" },
+        { "name": "Peru", "code": "PER", "flag": "🇵🇪", "logo": "https://flagcdn.com/w40/pe.png", "confederation": "CONMEBOL" },
+        { "name": "Ghana", "code": "GHA", "flag": "🇬🇭", "logo": "https://flagcdn.com/w40/gh.png", "confederation": "CAF" }
       ]
     },
     {
       "name": "Pot 4",
       "teams": [
-        { "name": "Saudi Arabia", "code": "KSA", "flag": "🇸🇦", "confederation": "AFC" },
-        { "name": "Qatar", "code": "QAT", "flag": "🇶🇦", "confederation": "AFC" },
-        { "name": "Iraq", "code": "IRQ", "flag": "🇮🇶", "confederation": "AFC" },
-        { "name": "UAE", "code": "UAE", "flag": "🇦🇪", "confederation": "AFC" },
-        { "name": "Panama", "code": "PAN", "flag": "🇵🇦", "confederation": "CONCACAF" },
-        { "name": "Jamaica", "code": "JAM", "flag": "🇯🇲", "confederation": "CONCACAF" },
-        { "name": "Paraguay", "code": "PAR", "flag": "🇵🇾", "confederation": "CONMEBOL" },
-        { "name": "Venezuela", "code": "VEN", "flag": "🇻🇪", "confederation": "CONMEBOL" },
-        { "name": "Bolivia", "code": "BOL", "flag": "🇧🇴", "confederation": "CONMEBOL" },
-        { "name": "Honduras", "code": "HON", "flag": "🇭🇳", "confederation": "CONCACAF" },
-        { "name": "New Zealand", "code": "NZL", "flag": "🇳🇿", "confederation": "OFC" },
-        { "name": "China", "code": "CHN", "flag": "🇨🇳", "confederation": "AFC" }
+        { "name": "Saudi Arabia", "code": "KSA", "flag": "🇸🇦", "logo": "https://flagcdn.com/w40/sa.png", "confederation": "AFC" },
+        { "name": "Qatar", "code": "QAT", "flag": "🇶🇦", "logo": "https://flagcdn.com/w40/qa.png", "confederation": "AFC" },
+        { "name": "Iraq", "code": "IRQ", "flag": "🇮🇶", "logo": "https://flagcdn.com/w40/iq.png", "confederation": "AFC" },
+        { "name": "UAE", "code": "UAE", "flag": "🇦🇪", "logo": "https://flagcdn.com/w40/ae.png", "confederation": "AFC" },
+        { "name": "Panama", "code": "PAN", "flag": "🇵🇦", "logo": "https://flagcdn.com/w40/pa.png", "confederation": "CONCACAF" },
+        { "name": "Jamaica", "code": "JAM", "flag": "🇯🇲", "logo": "https://flagcdn.com/w40/jm.png", "confederation": "CONCACAF" },
+        { "name": "Paraguay", "code": "PAR", "flag": "🇵🇾", "logo": "https://flagcdn.com/w40/py.png", "confederation": "CONMEBOL" },
+        { "name": "Venezuela", "code": "VEN", "flag": "🇻🇪", "logo": "https://flagcdn.com/w40/ve.png", "confederation": "CONMEBOL" },
+        { "name": "Bolivia", "code": "BOL", "flag": "🇧🇴", "logo": "https://flagcdn.com/w40/bo.png", "confederation": "CONMEBOL" },
+        { "name": "Honduras", "code": "HON", "flag": "🇭🇳", "logo": "https://flagcdn.com/w40/hn.png", "confederation": "CONCACAF" },
+        { "name": "New Zealand", "code": "NZL", "flag": "🇳🇿", "logo": "https://flagcdn.com/w40/nz.png", "confederation": "OFC" },
+        { "name": "China", "code": "CHN", "flag": "🇨🇳", "logo": "https://flagcdn.com/w40/cn.png", "confederation": "AFC" }
       ]
     }
   ]
