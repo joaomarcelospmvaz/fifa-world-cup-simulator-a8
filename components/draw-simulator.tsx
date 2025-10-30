@@ -8,20 +8,28 @@ import { Card } from "@/components/ui/card"
 import teamsData from "@/data/teams.json"
 import { Trophy, Shuffle, RotateCcw, Hand, Zap, ChevronLeft, ChevronRight, Download } from "lucide-react"
 
-type Team = {
+type BaseTeam = {
   name: string
   code: string
-  flag: string
+  flag: string // Keep flag for backwards compatibility
+  logo?: string // URL to the team's logo image
   confederation: string
-  potIndex?: number // Added potIndex to track which pot the team came from
 }
+
+type Team = BaseTeam & { potIndex?: number }
 
 type Pot = {
   name: string
-  teams: Team[]
+  teams: BaseTeam[]
 }
 
-type TeamWithPotIndex = Team & { potIndex: number }
+type TeamWithPotIndex = BaseTeam & { potIndex: number }
+
+// Team with a guaranteed potIndex (useful for placements and algorithms)
+type TeamWithPot = Team & { potIndex: number }
+
+// Reusable entry shape for arrays passed to placement algorithms
+type TeamEntry = { team: TeamWithPot; potIndex: number }
 
 type Group = {
   name: string
@@ -178,7 +186,7 @@ export default function DrawSimulator() {
 
   const placeTeamsWithBacktracking = (
     groupsArray: Group[],
-    allTeams: { team: Team; potIndex: number }[],
+    allTeams: TeamEntry[],
     teamIndex = 0,
     maxAttempts = 1000
   ): Group[] | null => {
@@ -207,7 +215,7 @@ export default function DrawSimulator() {
     if (team.code === "MEX" && !groupsArray[0].teams.some(t => t.code === "MEX")) {
       if (canPlaceTeamInGroup(team, 0, potIndex, groupsArray)) {
         const newGroups = groupsArray.map((g, i) =>
-          i === 0 ? { ...g, teams: [...g.teams, team] } : { ...g }
+          i === 0 ? { ...g, teams: [...g.teams, { ...team, potIndex }] } : { ...g }
         );
         const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
         if (result) return result;
@@ -218,7 +226,7 @@ export default function DrawSimulator() {
     if (team.code === "CAN" && !groupsArray[1].teams.some(t => t.code === "CAN")) {
       if (canPlaceTeamInGroup(team, 1, potIndex, groupsArray)) {
         const newGroups = groupsArray.map((g, i) =>
-          i === 1 ? { ...g, teams: [...g.teams, team] } : { ...g }
+          i === 1 ? { ...g, teams: [...g.teams, { ...team, potIndex }] } : { ...g }
         );
         const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
         if (result) return result;
@@ -229,7 +237,7 @@ export default function DrawSimulator() {
     if (team.code === "USA" && !groupsArray[3].teams.some(t => t.code === "USA")) {
       if (canPlaceTeamInGroup(team, 3, potIndex, groupsArray)) {
         const newGroups = groupsArray.map((g, i) =>
-          i === 3 ? { ...g, teams: [...g.teams, team] } : { ...g }
+          i === 3 ? { ...g, teams: [...g.teams, { ...team, potIndex }] } : { ...g }
         );
         const result = placeTeamsWithBacktracking(newGroups, allTeams, teamIndex + 1, maxAttempts - 1);
         if (result) return result;
@@ -262,13 +270,14 @@ export default function DrawSimulator() {
     setIsDrawing(true)
     const newGroups = initializeGroups()
 
-    // Prepare all teams with their pot indices
-    const allTeams: { team: Team & { potIndex: number }; potIndex: number }[] = []
+  // Prepare all teams with their pot indices
+  const allTeams: TeamEntry[] = []
 
     // Mexico must be first (Group A position 1)
     const mexicoTeam = teamsData.pots[0].teams.find((t) => t.code === "MEX")
     if (mexicoTeam) {
-      allTeams.push({ team: { ...mexicoTeam, potIndex: 0 }, potIndex: 0 })
+      const withPotIndex = { ...mexicoTeam, potIndex: 0 } as TeamWithPotIndex
+      allTeams.push({ team: withPotIndex, potIndex: 0 })
     }
 
     // Add all other teams
@@ -335,8 +344,8 @@ export default function DrawSimulator() {
     setIsDrawing(true)
     const newGroups = initializeGroups()
 
-    // Prepare all teams with their pot indices
-    const allTeams: { team: Team; potIndex: number }[] = []
+  // Prepare all teams with their pot indices
+  const allTeams: TeamEntry[] = []
 
     // Mexico must be first (Group A position 1)
     const mexicoTeam = teamsData.pots[0].teams.find((t) => t.code === "MEX")
@@ -501,7 +510,7 @@ export default function DrawSimulator() {
       teams: [...group.teams]
     }));
 
-    const remainingTeams: { team: Team; potIndex: number }[] = []
+  const remainingTeams: TeamEntry[] = []
     
     // Track which special teams we still need to place
     const needMexico = !currentGroups[0].teams.some(t => t.code === "MEX")
@@ -600,7 +609,7 @@ export default function DrawSimulator() {
     }
   }
 
-  const generateShareImage = () => {
+  const generateShareImage = async () => {
     try {
       // Create canvas with social media optimized dimensions
       const canvas = document.createElement("canvas")
@@ -832,10 +841,41 @@ export default function DrawSimulator() {
           ctx.lineWidth = 2
           ctx.strokeRect(teamX, teamY, teamWidth, teamHeight)
 
-          // Team flag (emoji)
-          ctx.font = "48px system-ui, -apple-system, sans-serif"
-          ctx.textAlign = "center"
-          ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 55)
+          // Load and draw team flag/logo
+          try {
+            if (team.logo) {
+              const flagImage = new Image()
+              flagImage.src = team.logo
+              const drawFlag = await new Promise<void>((resolve, reject) => {
+                flagImage.onload = () => {
+                  const flagSize = 48
+                  ctx.drawImage(
+                    flagImage,
+                    teamX + (teamWidth - flagSize) / 2,
+                    teamY + 20,
+                    flagSize,
+                    flagSize
+                  )
+                  resolve()
+                }
+                flagImage.onerror = () => reject()
+              }).catch(() => {
+                // Fallback to emoji if image fails to load
+                ctx.font = "48px system-ui, -apple-system, sans-serif"
+                ctx.textAlign = "center"
+                ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 55)
+              })
+            } else {
+              ctx.font = "48px system-ui, -apple-system, sans-serif"
+              ctx.textAlign = "center"
+              ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 55)
+            }
+          } catch (error) {
+            // Fallback to emoji if there's any error
+            ctx.font = "48px system-ui, -apple-system, sans-serif"
+            ctx.textAlign = "center"
+            ctx.fillText(team.flag, teamX + teamWidth / 2, teamY + 55)
+          }
 
           // Team name
           ctx.fillStyle = "#000000"
@@ -962,7 +1002,15 @@ export default function DrawSimulator() {
             className={`p-4 md:p-6 mb-4 md:mb-6 bg-primary text-primary-foreground transition-all duration-500 ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
           >
             <div className="flex items-center justify-center gap-3">
-              <span className="text-3xl md:text-4xl">{currentDrawingTeam.flag}</span>
+              {currentDrawingTeam.logo ? (
+                <img 
+                  src={currentDrawingTeam.logo} 
+                  alt={`${currentDrawingTeam.name} flag`}
+                  className="w-12 h-12 md:w-16 md:h-16 object-contain"
+                />
+              ) : (
+                <span className="text-3xl md:text-4xl">{currentDrawingTeam.flag}</span>
+              )}
               <div className="text-left">
                 <p className="text-xs font-medium opacity-90">Sorteando</p>
                 <h2 className="text-lg md:text-2xl font-bold leading-tight">{currentDrawingTeam.name}</h2>
@@ -975,13 +1023,28 @@ export default function DrawSimulator() {
           <Card
             className={`p-3 md:p-4 mb-4 md:mb-6 bg-accent/10 border-accent transition-all duration-500 ${isTransitioning ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}
           >
-            <p className="text-sm md:text-base font-semibold mb-1">
-              {selectedTeam
-                ? movingFromGroup !== null
-                  ? `${selectedTeam.team.flag} ${selectedTeam.team.name} - Mover para outro grupo`
-                  : `${selectedTeam.team.flag} ${selectedTeam.team.name} - Selecione um grupo`
-                : `Selecione uma seleção`}
-            </p>
+            <div className="text-sm md:text-base font-semibold mb-1 flex items-center gap-2">
+              {selectedTeam ? (
+                <div className="flex items-center gap-2">
+                  {selectedTeam.team.logo ? (
+                    <img 
+                      src={selectedTeam.team.logo} 
+                      alt={`${selectedTeam.team.name} flag`}
+                      className="w-6 h-6 object-contain"
+                    />
+                  ) : (
+                    <span>{selectedTeam.team.flag}</span>
+                  )}
+                  <span>
+                    {movingFromGroup !== null
+                      ? `${selectedTeam.team.name} - Mover para outro grupo`
+                      : `${selectedTeam.team.name} - Selecione um grupo`}
+                  </span>
+                </div>
+              ) : (
+                'Selecione uma seleção'
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {movingFromGroup !== null
                 ? "Clique em um grupo para mover ou clique no grupo atual para cancelar"
@@ -1059,7 +1122,15 @@ export default function DrawSimulator() {
                                 }`}
                               >
                                 <div className="flex flex-col items-center gap-1.5 text-center">
-                                  <span className="text-2xl md:text-3xl">{team.flag}</span>
+                                  {team.logo ? (
+                                    <img 
+                                      src={team.logo} 
+                                      alt={`${team.name} flag`}
+                                      className="w-8 h-8 md:w-10 md:h-10 object-contain"
+                                    />
+                                  ) : (
+                                    <span className="text-2xl md:text-3xl">{team.flag}</span>
+                                  )}
                                   <p className="font-semibold text-xs leading-tight line-clamp-2">{team.name}</p>
                                   <p className="text-[10px] text-muted-foreground">{team.confederation}</p>
                                 </div>
@@ -1139,7 +1210,15 @@ export default function DrawSimulator() {
                               : "hover:bg-accent/50"
                           } ${selectedTeam?.team.code === team.code && movingFromGroup === groupIndex ? "ring-1 ring-primary bg-accent" : ""}`}
                         >
-                          <span className="text-sm md:text-base shrink-0">{team.flag}</span>
+                          {team.logo ? (
+                            <img 
+                              src={team.logo} 
+                              alt={`${team.name} flag`}
+                              className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0"
+                            />
+                          ) : (
+                            <span className="text-sm md:text-base shrink-0">{team.flag}</span>
+                          )}
                           <p className="font-semibold text-[8px] md:text-[9px] text-center leading-tight line-clamp-1">
                             {team.name}
                           </p>

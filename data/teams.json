@@ -3,7 +3,7 @@
     {
       "name": "Pot 1",
       "teams": [
-        { "name": "Argentina", "code": "ARG", "flag": "🇦🇷", "confederation": "CONMEBOL" },
+        { "name": "Argentina", "code": "ARG", "flag": "🇦🇷", "logo": "/flags/arg.svg", "confederation": "CONMEBOL" },
         { "name": "France", "code": "FRA", "flag": "🇫🇷", "confederation": "UEFA" },
         { "name": "Spain", "code": "ESP", "flag": "🇪🇸", "confederation": "UEFA" },
         { "name": "England", "code": "ENG", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "confederation": "UEFA" },
